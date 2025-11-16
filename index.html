@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Timeline Tracker</title>
+    <style>
+        /* --- General Layout --- */
+        :root {
+            --bg-color-darkest: #202020;
+            --bg-color-dark: #2b2b2b;
+            --bg-color-medium: #3c3c3c;
+            --bg-color-light: #4a4a4a;
+            --text-color: #e0e0e0;
+            --text-color-muted: #999;
+            --primary-color: #4fc3f7; /* Ongoing */
+            --accent-green: #81c784; /* Completed */
+            --accent-orange: #ffb74d; /* Halted */
+            --accent-purple: #ba68c8;
+            --accent-red: #e57373; /* Failed / Today */
+            --accent-grey: #90a4ae;
+            --task-header-width: 170px;
+        }
+
+        body {
+            font-family: "SF Mono", "Consolas", "Menlo", "Courier New", monospace;
+            background-color: var(--bg-color-darkest);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        h2, h3 {
+            border-bottom: 2px solid var(--bg-color-light);
+            padding-bottom: 5px;
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        /* --- Main Page Layout --- */
+        .page-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr auto;
+            height: calc(100vh - 30px);
+            gap: 10px;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .main-panel {
+            background-color: var(--bg-color-dark);
+            border-radius: 8px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            grid-row: 1;
+            min-width: 0; 
+        }
+        
+        /* Main Controls Layout */
+        .main-controls-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 15px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        #project-controls, #standard-controls, #contextual-controls, #date-range-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #project-name {
+            background: var(--bg-color-darkest);
+            border: 1px solid var(--bg-color-light);
+            color: var(--text-color);
+            border-radius: 5px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 1.1em;
+            width: 150px;
+        }
+        
+        #contextual-controls {
+            justify-self: center;
+        }
+
+        #standard-date-range-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-self: end;
+        }
+        
+        #date-range-controls {
+             border-left: 2px solid var(--bg-color-light);
+             padding-left: 10px;
+        }
+        #date-range-controls label {
+            font-size: 0.9em;
+            color: var(--text-color-muted);
+        }
+        #date-range-controls input[type="date"] {
+            background: var(--bg-color-darkest);
+            border: 1px solid var(--bg-color-light);
+            color: var(--text-color);
+            border-radius: 5px;
+            padding: 6px;
+            font-family: inherit;
+        }
+        #project-date-set {
+            padding: 8px 12px;
+        }
+
+
+        /* --- Buttons & Forms --- */
+        .btn {
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            color: #111;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: #29b6f6; }
+        .btn-secondary { background-color: var(--accent-grey); }
+        .btn-secondary:hover { background-color: #78909c; }
+        .btn-danger { background-color: var(--accent-red); }
+        .btn-danger:hover { background-color: #ef5350; }
+        .btn-subtask-add {
+            background-color: var(--accent-green);
+            color: #111;
+            padding: 10px 15px;
+            font-size: 0.9em;
+        }
+        
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .form-section label {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: var(--text-color-muted);
+            margin-bottom: -5px;
+        }
+        .form-section input,
+        .form-section select,
+        .form-section textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--bg-color-light);
+            background-color: var(--bg-color-darkest);
+            color: var(--text-color);
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .form-section textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .form-section input[type="date"] {
+            color-scheme: dark;
+        }
+        .form-section input[type="color"] {
+            padding: 5px; /* Color input needs different padding */
+            min-height: 40px;
+        }
+
+        /* --- Modal System --- */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto; /* Allow modal to scroll if content is tall */
+            padding: 20px 0;
+        }
+        .modal-content {
+            background-color: var(--bg-color-dark);
+            border-radius: 8px;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+            margin: auto; /* Center in scrollable view */
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 10px; right: 15px;
+            background: none; border: none;
+            color: var(--text-color-muted);
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close-btn:hover { color: var(--text-color); }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        
+        #json-export-textarea {
+            width: 100%;
+            height: 300px;
+            background-color: var(--bg-color-darkest);
+            color: var(--text-color);
+            border: 1px solid var(--bg-color-light);
+            border-radius: 5px;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* --- Timeline Visualizer --- */
+        #timeline-visualizer {
+            flex-grow: 1;
+            position: relative;
+            background-color: var(--bg-color-darkest);
+            border-radius: 5px;
+            border: 1px solid var(--bg-color-light);
+            overflow: auto;
+        }
+        
+        #timeline-ruler-wrapper {
+            position: sticky;
+            top: 0;
+            height: 30px;
+            z-index: 20;
+            display: flex;
+        }
+        #timeline-ruler-corner {
+            width: var(--task-header-width);
+            min-width: var(--task-header-width);
+            background-color: var(--bg-color-darkest);
+            border-bottom: 1px solid var(--bg-color-light);
+        }
+        #timeline-ruler {
+            position: relative;
+            height: 30px;
+            background-color: var(--bg-color-darkest);
+            border-bottom: 1px solid var(--bg-color-light);
+            box-sizing: border-box;
+        }
+        .time-marker {
+            position: absolute;
+            font-size: 0.8em;
+            color: var(--text-color-muted);
+            transform: translateX(-50%);
+            top: 10px;
+            white-space: nowrap;
+        }
+        .time-marker::before {
+            content: '';
+            position: absolute;
+            width: 1px;
+            background: var(--bg-color-medium);
+            top: -10px; left: 50%;
+            z-index: -1;
+        }
+        .month-marker::before { height: 100vh; background: var(--bg-color-light); }
+        .week-marker::before { height: 100vh; }
+        .day-marker { font-size: 0.7em; color: #666; }
+        .day-marker::before { height: 5px; top: -5px; background: #555; }
+
+        .time-marker.today-label {
+            color: var(--accent-red);
+            font-weight: bold;
+        }
+        #today-marker-line {
+            position: absolute;
+            width: 2px;
+            height: 100vh; /* Will be clipped by container */
+            background-color: var(--accent-red);
+            top: 0;
+            z-index: 10; /* Below sticky headers, above tracks */
+            pointer-events: none;
+        }
+
+        #timeline-tracks-container {
+            position: relative;
+            height: auto;
+            min-height: 100%;
+        }
+        
+        .timeline-track {
+            display: flex;
+            border-bottom: 1px solid var(--bg-color-light);
+            background-color: var(--bg-color-dark);
+        }
+        
+        .track-header {
+            width: var(--task-header-width);
+            min-width: var(--task-header-width);
+            padding: 10px;
+            background-color: var(--bg-color-medium);
+            font-weight: bold;
+            font-size: 0.9em;
+            border-right: 1px solid var(--bg-color-light);
+            position: sticky;
+            left: 0;
+            z-index: 15;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            cursor: pointer;
+            /* Default color, will be overridden by JS */
+            background-color: var(--bg-color-medium); 
+            color: var(--text-color);
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .track-header.selected {
+            /* Use a light color for selection to contrast with custom bg */
+            background-color: #ffffff; 
+            color: #111;
+            box-shadow: 0 0 10px #fff;
+        }
+        
+        .track-body {
+            position: relative;
+            flex-grow: 1;
+            height: auto;
+            min-height: 40px;
+            cursor: pointer; 
+        }
+
+        .timeline-node-clip {
+            position: absolute;
+            height: 25px;
+            border-radius: 4px;
+            border: 1px solid #000;
+            color: #111;
+            font-size: 0.9em;
+            font-weight: bold;
+            white-space: nowrap;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            top: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .timeline-node-clip.selected {
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px #fff;
+            z-index: 12;
+        }
+        
+        .task-link-icon {
+            color: #111;
+            text-decoration: none;
+            margin-left: 5px;
+            font-weight: bold;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .task-link-icon:hover {
+            opacity: 1;
+        }
+        
+        /* Task Status Colors */
+        .timeline-node-clip.task-status-ongoing { background-color: var(--primary-color); }
+        .timeline-node-clip.task-status-halted { background-color: var(--accent-orange); }
+        .timeline-node-clip.task-status-failed { background-color: var(--accent-red); }
+        .timeline-node-clip.task-status-completed { background-color: var(--accent-green); opacity: 0.7; }
+
+        
+        /* --- Task Details Panel --- */
+        
+        #task-details-panel {
+            grid-row: 2;
+            background-color: var(--bg-color-dark);
+            border-radius: 8px;
+            padding: 15px;
+            box-sizing: border-box;
+            position: relative;
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        #task-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--bg-color-light);
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+            flex-shrink: 0;
+            gap: 15px;
+        }
+        #task-header-left {
+            flex-grow: 1;
+        }
+        #task-panel-title {
+            border: none;
+            padding: 0;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        #task-info-bar {
+            font-size: 0.9em;
+            color: var(--text-color-muted);
+            margin-top: 5px;
+            height: 1.2em;
+        }
+        #task-header-right {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        #sub-task-container {
+            flex-grow: 1;
+            overflow: hidden;
+            display: flex;
+            gap: 15px;
+            padding-top: 10px;
+        }
+
+        .task-details-column {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: var(--bg-color-darkest);
+            border-radius: 4px;
+            padding: 10px 15px;
+        }
+        
+        #task-description-display {
+            background: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+        }
+        #task-description-display h4 {
+            margin: 0 0 5px 0;
+            color: var(--primary-color);
+            font-size: 0.9em;
+        }
+        #task-description-display p {
+            margin: 0;
+            font-size: 0.9em;
+            color: var(--text-color);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        #sub-task-list {
+            position: relative;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+        
+        .sub-task-item {
+            display: flex;
+            align-items: flex-start; /* Align to top */
+            gap: 10px;
+            background: var(--bg-color-dark);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .subtask-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 5px; /* Align with text */
+        }
+        /* Subtask Status Colors */
+        .subtask-status-dot.task-status-ongoing { background-color: var(--primary-color); }
+        .subtask-status-dot.task-status-halted { background-color: var(--accent-orange); }
+        .subtask-status-dot.task-status-failed { background-color: var(--accent-red); }
+        .subtask-status-dot.task-status-completed { background-color: var(--accent-green); }
+
+        .sub-task-info {
+            flex-grow: 1;
+        }
+        .sub-task-item label {
+            font-size: 0.9em;
+            color: var(--text-color);
+            word-break: break-word;
+        }
+        .sub-task-item.status-completed label {
+            text-decoration: line-through;
+            color: var(--text-color-muted);
+        }
+        
+        .sub-task-description-display {
+            font-size: 0.8em;
+            color: var(--text-color-muted);
+            padding-left: 2px;
+            margin-top: 4px;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .sub-task-description-display:empty {
+            display: none;
+        }
+        
+        .sub-task-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-edit-subtask,
+        .btn-delete-subtask {
+            background: none;
+            border: none;
+            color: var(--text-color-muted);
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-size: 1.1em;
+            margin-top: -2px; /* Align with dot */
+        }
+        .btn-edit-subtask {
+            font-size: 0.9em;
+            line-height: 22px;
+        }
+        
+        .btn-edit-subtask:hover {
+            background: var(--primary-color);
+            color: #111;
+        }
+        .btn-delete-subtask:hover {
+            background: var(--accent-red);
+            color: #111;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="page-container">
+
+        <div class="main-panel">
+            
+            <div class="main-controls-grid">
+                <div id="project-controls">
+                    <input type="text" id="project-name" value="Untitled Project">
+                    <button id="btn-new-project" class="btn btn-secondary">New Project</button>
+                    <button id="btn-save-json" class="btn btn-primary">Save JSON</button>
+                    <button id="btn-load-json" class="btn btn-secondary">Load JSON</button>
+                    <button id="btn-show-json" class="btn btn-secondary">Show JSON</button>
+                    <button id="btn-export-report" class="btn btn-secondary">Export Report</button> <!-- Added this button -->
+                    <input type="file" id="load-json-input" class="hidden" accept=".json">
+                </div>
+                
+                <div id="standard-date-range-wrapper">
+                    <div id="contextual-controls">
+                        <button id="btn-edit-phase" class="btn btn-primary hidden">Edit Phase</button>
+                        <button id="btn-edit-task" class="btn btn-primary hidden">Edit Task</button>
+                    </div>
+                    
+                    <div id="date-range-controls">
+                        <label for="project-start-date">Start:</label>
+                        <input type="date" id="project-start-date">
+                        <label for="project-end-date">End:</label>
+                        <input type="date" id="project-end-date">
+                        <button id="project-date-set" class="btn btn-secondary">Set</button>
+                    </div>
+
+                    <div id="standard-controls">
+                        <button id="btn-add-phase" class="btn btn-secondary">Add Phase</button>
+                        <button id="btn-add-task" class="btn btn-primary">Add Task</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="timeline-visualizer">
+                <div id="timeline-ruler-wrapper">
+                    <div id="timeline-ruler-corner"></div>
+                    <div id="timeline-ruler"></div>
+                </div>
+                <div id="timeline-tracks-container">
+                    <!-- Phase Lanes will be rendered here by JavaScript -->
+                </div>
+            </div>
+
+        </div>
+        
+        <div id="task-details-panel" class="hidden">
+            <div id="task-panel-header">
+                <div id="task-header-left">
+                    <h3 id="task-panel-title">Task Details</h3>
+                    <div id="task-info-bar">Select a task to see details</div>
+                </div>
+                <div id="task-header-right">
+                    <button id="btn-add-subtask" class="btn btn-subtask-add">Add Sub-task</button>
+                    <button class="modal-close-btn" id="btn-close-task-panel" style="position: static; transform: none;">&times;</button>
+                </div>
+            </div>
+            
+            <div id="sub-task-container">
+                <!-- Task Description and Sub-task List will be rendered here -->
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden">
+        <div id="modal-content" class="modal-content">
+            <!-- Modal content will be injected here -->
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Config ---
+            let pixelsPerDay = 40;
+            const TRACK_HEADER_WIDTH = 170;
+            let projectStartDate = new Date("2025-11-01");
+            let projectEndDate = new Date("2025-12-31");
+            let projectName = "New Website Launch";
+
+            // --- **NEW** DATA MODEL ---
+            let timelineData = [
+                {
+                    id: 1,
+                    phaseName: "Design",
+                    color: "#8c9e83", // Changed
+                    tasks: [
+                        { 
+                            id: 101, name: "Wireframes", 
+                            description: "Initial wireframes for key pages.",
+                            status: "completed",
+                            link: "https://www.figma.com/wireframes", // Added link
+                            assignee: "Jane Doe", // Added Assignee
+                            startTime: "2025-11-04", endTime: "2025-11-08", 
+                            subTasks: [
+                                { id: 1001, text: "Home Page", status: "completed", description: "" },
+                                { id: 1002, text: "Product Page", status: "completed", description: "" }
+                            ]
+                        },
+                        { 
+                            id: 102, name: "Mockups", 
+                            description: "High-fidelity mockups based on wireframes.",
+                            status: "ongoing",
+                            link: "https://www.figma.com/mockups", // Added link
+                            assignee: "Jane Doe", // Added Assignee
+                            startTime: "2025-11-10", endTime: "2025-11-15", 
+                            subTasks: [
+                                { id: 1003, text: "Home Page Mockup", status: "ongoing", description: "Desktop and mobile" },
+                                { id: 1004, text: "Product Page Mockup", status: "ongoing", description: "" },
+                                { id: 1005, text: "Style Guide", status: "completed", description: "Colors, fonts, spacing." }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 2,
+                    phaseName: "Development",
+                    color: "#a1c6e1", // Changed
+                    tasks: [
+                        { 
+                            id: 201, name: "Frontend Setup", 
+                            description: "Initialize project, add component library.",
+                            status: "halted",
+                            link: "",
+                            assignee: "John Smith", // Added Assignee
+                            startTime: "2025-11-11", endTime: "2025-11-18", 
+                            subTasks: [
+                                { id: 2001, text: "Init React App", status: "completed", description: "" },
+                                { id: 2002, text: "Component Library", status: "halted", description: "Waiting on final style guide." }
+                            ]
+                        },
+                        { 
+                            id: 202, name: "API Integration", 
+                            description: "Connect frontend to backend services.",
+                            status: "ongoing",
+                            link: "",
+                            assignee: "John Smith", // Added Assignee
+                            startTime: "2025-11-19", endTime: "2025-11-26", 
+                            subTasks: [
+                                { id: 2003, text: "User Auth Endpoint", status: "ongoing", description: "" },
+                                { id: 2004, text: "Product Endpoint", status: "ongoing", description: "" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 3,
+                    phaseName: "Testing",
+                    color: "#f0bda1", // Changed
+                    tasks: [
+                        { 
+                            id: 301, name: "QA Pass 1", 
+                            description: "Initial quality assurance pass.",
+                            status: "ongoing",
+                            link: "",
+                            assignee: "QA Team", // Added Assignee
+                            startTime: "2025-11-27", endTime: "2025-12-05", 
+                            subTasks: []
+                        },
+                        { 
+                            id: 302, name: "User Auth Test", 
+                            description: "Testing login/logout, blocked by server issue.",
+                            status: "failed",
+                            link: "https://jira.example.com/BUG-123",
+                            assignee: "QA Team", // Added Assignee
+                            startTime: "2025-11-28", endTime: "2025-12-02", 
+                            subTasks: []
+                        }
+                    ]
+                }
+            ];
+            
+            // --- Selection State ---
+            let selectedPhaseId = null;
+            let selectedTaskInfo = { phaseId: null, taskId: null };
+
+            // --- DOM References ---
+            const modalBackdrop = document.getElementById('modal-backdrop');
+            const modalContent = document.getElementById('modal-content');
+            const timelineVisualizer = document.getElementById('timeline-visualizer');
+            const ruler = document.getElementById('timeline-ruler');
+            const rulerWrapper = document.getElementById('timeline-ruler-wrapper');
+            const tracksContainer = document.getElementById('timeline-tracks-container');
+            const addPhaseBtn = document.getElementById('btn-add-phase');
+            const addTaskBtn = document.getElementById('btn-add-task');
+            
+            const editTaskBtn = document.getElementById('btn-edit-task');
+            const editPhaseBtn = document.getElementById('btn-edit-phase');
+            
+            const taskDetailsPanel = document.getElementById('task-details-panel');
+            const taskPanelTitle = document.getElementById('task-panel-title');
+            const taskInfoBar = document.getElementById('task-info-bar');
+            const subTaskContainer = document.getElementById('sub-task-container');
+            const taskCloseBtn = document.getElementById('btn-close-task-panel');
+            const addSubtaskBtn = document.getElementById('btn-add-subtask');
+            
+            const startDateInput = document.getElementById('project-start-date');
+            const endDateInput = document.getElementById('project-end-date');
+            const dateSetBtn = document.getElementById('project-date-set');
+            
+            const projectNameInput = document.getElementById('project-name');
+            const saveJsonBtn = document.getElementById('btn-save-json');
+            const loadJsonBtn = document.getElementById('btn-load-json');
+            const loadJsonInput = document.getElementById('load-json-input');
+            const showJsonBtn = document.getElementById('btn-show-json');
+            const newProjectBtn = document.getElementById('btn-new-project');
+            const btnExportReport = document.getElementById('btn-export-report'); // Added this
+            
+            // --- Date & Helper Functions ---
+
+            function parseDate(dateString) {
+                const parts = dateString.split('-');
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            }
+            
+            function formatDate(date) {
+                return date.toISOString().split('T')[0];
+            }
+            
+            // Gets today's YYYY-MM-DD string in GMT+8
+            function getTodayGmt8() {
+                const now = new Date();
+                // Get the date string for "Asia/Singapore" (GMT+8)
+                const options = {
+                    timeZone: 'Asia/Singapore', // WITA is GMT+8, same as Singapore
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                };
+                const formatter = new Intl.DateTimeFormat('en-CA', options); // en-CA gives YYYY-MM-DD
+                return formatter.format(now);
+            }
+            
+            const DAY_MS = 1000 * 60 * 60 * 24;
+            
+            function getTotalDays() {
+                const start = new Date(projectStartDate.getTime());
+                const end = new Date(projectEndDate.getTime());
+                start.setHours(0,0,0,0);
+                end.setHours(0,0,0,0);
+                const diff = end.getTime() - start.getTime();
+                return Math.round(diff / DAY_MS) + 1; // Inclusive
+            }
+            
+            function dateToPixel(date) {
+                if (typeof date === 'string') date = parseDate(date);
+                const start = new Date(projectStartDate.getTime());
+                start.setHours(0,0,0,0);
+                date.setHours(0,0,0,0);
+                
+                const diff = date.getTime() - start.getTime();
+                const days = diff / DAY_MS;
+                return days * pixelsPerDay;
+            }
+
+            function findTask(phaseId, taskId) {
+                if (phaseId === null || taskId === null) return null;
+                const phase = timelineData.find(t => t.id === phaseId);
+                if (!phase) return null;
+                return phase.tasks.find(n => n.id === taskId);
+            }
+            
+            // --- Color Helper ---
+            const phaseColorPalette = {
+                '#757575': 'Default Grey',
+                '#8c9e83': 'Sage',
+                '#66b2b2': 'Mint',
+                '#b0a4d2': 'Lavender',
+                '#f0bda1': 'Peach',
+                '#d1c0a1': 'Sand',
+                '#d1a1ab': 'Rose',
+                '#a1c6e1': 'Sky',
+                '#a9a9a9': 'Stone'
+            };
+
+            function createColorOptions(selectedColor) {
+                let html = '';
+                for (const hex in phaseColorPalette) {
+                    const name = phaseColorPalette[hex];
+                    const selected = hex === selectedColor ? 'selected' : '';
+                    html += `<option value="${hex}" ${selected} style="background-color: ${hex}; color: ${isColorLight(hex) ? '#111' : '#eee'};">${name}</option>`;
+                }
+                return html;
+            }
+
+            // --- Modal API ---
+
+            function showModal(htmlContent) {
+                modalContent.innerHTML = htmlContent;
+                modalBackdrop.classList.remove('hidden');
+                
+                const closeBtn = modalContent.querySelector('.modal-close-btn');
+                if(closeBtn) {
+                    closeBtn.onclick = closeModal;
+                }
+                
+                const cancelBtns = modalContent.querySelectorAll('.btn-cancel');
+                cancelBtns.forEach(btn => {
+                    btn.onclick = closeModal;
+                });
+            }
+            
+            function closeModal() {
+                modalBackdrop.classList.add('hidden');
+                modalContent.innerHTML = '';
+            }
+
+            // --- Core Render Functions ---
+
+            function renderAll() {
+                const totalDays = getTotalDays();
+                const timelineWidth = totalDays * pixelsPerDay;
+                
+                document.title = projectName;
+                projectNameInput.value = projectName;
+                
+                startDateInput.value = formatDate(projectStartDate);
+                endDateInput.value = formatDate(projectEndDate);
+                
+                renderMainRuler(totalDays, timelineWidth);
+                renderPhaseLanes(timelineWidth);
+                
+                const selectedTask = findTask(selectedTaskInfo.phaseId, selectedTaskInfo.taskId);
+                if (selectedTask && !taskDetailsPanel.classList.contains('hidden')) {
+                    renderTaskDetails(selectedTask);
+                } else {
+                    hideTaskDetails();
+                }
+            }
+            
+            function renderMainRuler(totalDays, timelineWidth) {
+                rulerWrapper.style.width = `${timelineWidth + TRACK_HEADER_WIDTH}px`;
+                ruler.innerHTML = '';
+                ruler.style.width = `${timelineWidth}px`;
+
+                let currentDate = new Date(projectStartDate.getTime());
+                const todayDateStr = getTodayGmt8();
+                
+                for (let i = 0; i < totalDays; i++) {
+                    const day = currentDate.getDate();
+                    const dayOfWeek = currentDate.getDay(); // 0=Sun, 1=Mon
+                    const currentDateStr = formatDate(currentDate);
+                    
+                    let markerType = 'day-marker';
+                    let label = '';
+
+                    if (day === 1) {
+                        markerType = 'month-marker';
+                        label = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    } else if (dayOfWeek === 1) { // Monday
+                        markerType = 'week-marker';
+                        label = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    } else if (pixelsPerDay > 30) {
+                        label = day;
+                    }
+                    
+                    const marker = document.createElement('span');
+                    marker.className = `time-marker ${markerType}`;
+                    marker.style.left = `${i * pixelsPerDay}px`;
+                    
+                    if (currentDateStr === todayDateStr) {
+                        marker.classList.add('today-label');
+                    }
+                    
+                    if(label) {
+                         marker.innerText = label;
+                    }
+                    
+                    if (markerType === 'day-marker' && pixelsPerDay < 15) {
+                        // skip minor markers if too dense
+                    } else {
+                        ruler.appendChild(marker);
+                    }
+                    
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                // Add Today Marker Line
+                const todayDate = parseDate(todayDateStr);
+                if (todayDate >= projectStartDate && todayDate <= projectEndDate) {
+                    const pixelPos = dateToPixel(todayDate);
+                    const todayMarker = document.createElement('div');
+                    todayMarker.id = 'today-marker-line';
+                    todayMarker.style.left = `${pixelPos}px`;
+                    ruler.appendChild(todayMarker);
+                }
+            }
+            
+            function renderPhaseLanes(timelineWidth) {
+                tracksContainer.style.width = `${timelineWidth + TRACK_HEADER_WIDTH}px`;
+                tracksContainer.innerHTML = '';
+                
+                timelineData.forEach(phase => {
+                    const trackElement = document.createElement('div');
+                    trackElement.className = 'timeline-track';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'track-header';
+                    header.style.backgroundColor = phase.color || 'var(--bg-color-medium)';
+                    
+                    // Simple contrast check
+                    const headerBg = header.style.backgroundColor;
+                    if(isColorLight(headerBg)) {
+                        header.style.color = "#111";
+                    } else {
+                        header.style.color = "#eee";
+                    }
+                    
+                    const headerText = document.createElement('span');
+                    headerText.innerText = phase.phaseName;
+                    
+                    if (phase.id === selectedPhaseId) {
+                        header.classList.add('selected');
+                        // Override selection color for light BGs
+                        if(isColorLight(headerBg)) {
+                             header.style.color = "#111";
+                        }
+                    }
+                    
+                    header.addEventListener('click', (e) => {
+                        handlePhaseSelect(phase.id);
+                    });
+                    
+                    header.appendChild(headerText);
+                    trackElement.appendChild(header);
+                    
+                    const body = document.createElement('div');
+                    body.className = 'track-body';
+                    body.style.width = `${timelineWidth}px`;
+                    body.style.minWidth = `${timelineWidth}px`;
+                    
+                    body.addEventListener('click', (e) => {
+                        if (e.target === body) {
+                            handleDeselect();
+                        }
+                    });
+
+                    let endTimes = [];
+                    let maxRow = 0;
+                    const sortedTasks = [...phase.tasks].sort((a, b) => parseDate(a.startTime) - parseDate(b.startTime));
+
+                    sortedTasks.forEach(task => {
+                        const taskStart = parseDate(task.startTime);
+                        const taskEnd = parseDate(task.endTime);
+
+                        let row = endTimes.findIndex(endTime => taskStart >= endTime);
+                        if(row === -1) {
+                            endTimes.push(taskEnd);
+                            row = endTimes.length - 1;
+                        } else {
+                            endTimes[row] = taskEnd;
+                        }
+                        maxRow = Math.max(maxRow, row);
+
+                        const clip = createTaskClipElement(task, phase.id, row);
+                        body.appendChild(clip);
+                    });
+                    
+                    let trackHeight = (maxRow + 1) * 35 + 15;
+                    body.style.height = `${trackHeight}px`;
+
+                    trackElement.appendChild(body);
+                    tracksContainer.appendChild(trackElement);
+                });
+            }
+            
+            function isColorLight(color) {
+                // Basic check for brightness, assumes hex or rgb
+                let r, g, b;
+                if (color.match(/^rgb/)) {
+                    [r, g, b] = color.match(/\d+/g);
+                } else if (color.startsWith("#")) {
+                    r = parseInt(color.substr(1, 2), 16);
+                    g = parseInt(color.substr(3, 2), 16);
+                    b = parseInt(color.substr(5, 2), 16);
+                } else {
+                    return false; // Default to dark text
+                }
+                return (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+            }
+            
+            function createTaskClipElement(task, phaseId, row) {
+                const clip = document.createElement('div');
+                clip.className = 'timeline-node-clip';
+                clip.classList.add(`task-status-${task.status || 'ongoing'}`);
+
+                clip.dataset.phaseId = phaseId;
+                clip.dataset.taskId = task.id;
+                
+                const startPixel = dateToPixel(task.startTime);
+                const endPixel = dateToPixel(task.endTime);
+                
+                const width = (endPixel - startPixel) + pixelsPerDay; 
+                
+                clip.style.left = `${startPixel}px`;
+                clip.style.width = `${width}px`;
+                clip.style.top = `${8 + row * 35}px`;
+
+                if (task.id === selectedTaskInfo.taskId && phaseId === selectedTaskInfo.phaseId) {
+                    clip.classList.add('selected');
+                }
+                
+                clip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleTaskClick(phaseId, task.id);
+                });
+                
+                const nameLabel = document.createElement('span');
+                nameLabel.innerText = task.name;
+                clip.appendChild(nameLabel);
+                
+                // Add link icon if link exists
+                if (task.link) {
+                    const linkIcon = document.createElement('a');
+                    linkIcon.href = task.link;
+                    linkIcon.target = "_blank";
+                    linkIcon.rel = "noopener noreferrer";
+                    linkIcon.className = "task-link-icon";
+                    linkIcon.innerHTML = "&#128279;"; // Link emoji
+                    linkIcon.title = task.link;
+                    linkIcon.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Don't select task when clicking link
+                    });
+                    clip.appendChild(linkIcon);
+                }
+                
+                return clip;
+            }
+            
+            // --- Task Details Panel Functions ---
+            
+            function showTaskDetails(task) {
+                taskDetailsPanel.classList.remove('hidden');
+                taskPanelTitle.innerText = `Task: ${task.name}`;
+                renderTaskDetails(task);
+                
+                const scrollPos = dateToPixel(task.startTime) - 50;
+                timelineVisualizer.scrollLeft = Math.max(0, scrollPos);
+            }
+            
+            function hideTaskDetails() {
+                taskDetailsPanel.classList.add('hidden');
+                taskInfoBar.innerText = 'Select a task to see details';
+            }
+            
+            function renderTaskDetails(task) {
+                subTaskContainer.innerHTML = ''; 
+                
+                // 1. Create Left Column (Description)
+                const leftColumn = document.createElement('div');
+                leftColumn.className = 'task-details-column';
+                
+                const descriptionEl = document.createElement('div');
+                descriptionEl.id = 'task-description-display';
+                const descriptionHtml = task.description 
+                    ? task.description.replace(/\n/g, '<br>') 
+                    : '<i>No description provided.</i>';
+                descriptionEl.innerHTML = `<h4>Task Description:</h4><p>${descriptionHtml}</p>`;
+                leftColumn.appendChild(descriptionEl);
+                
+                subTaskContainer.appendChild(leftColumn);
+
+                // 2. Create Right Column (Sub-tasks)
+                const rightColumn = document.createElement('div');
+                rightColumn.className = 'task-details-column';
+
+                const subTaskListEl = document.createElement('div');
+                subTaskListEl.id = 'sub-task-list';
+                
+                // 3. Render Sub-tasks
+                if (!task.subTasks || task.subTasks.length === 0) {
+                    taskInfoBar.innerText = 'No sub-tasks. Add one!';
+                } else {
+                    const completed = task.subTasks.filter(st => st.status === 'completed').length;
+                    taskInfoBar.innerText = `Sub-tasks: ${completed} / ${task.subTasks.length} completed`;
+                }
+
+                task.subTasks.forEach(subTask => {
+                    const item = document.createElement('div');
+                    item.className = 'sub-task-item';
+                    item.classList.add(`status-${subTask.status || 'ongoing'}`);
+                    
+                    const statusDot = document.createElement('span');
+                    statusDot.className = `subtask-status-dot task-status-${subTask.status || 'ongoing'}`;
+                    item.appendChild(statusDot);
+                    
+                    const infoWrapper = document.createElement('div');
+                    infoWrapper.className = 'sub-task-info';
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `subtask-${subTask.id}`;
+                    label.innerText = subTask.text;
+                    infoWrapper.appendChild(label);
+                    
+                    const description = document.createElement('div');
+                    description.className = 'sub-task-description-display';
+                    description.innerText = subTask.description || '';
+                    infoWrapper.appendChild(description);
+                    
+                    item.appendChild(infoWrapper);
+                    
+                    const controlsWrapper = document.createElement('div');
+                    controlsWrapper.className = 'sub-task-controls';
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn-edit-subtask';
+                    editBtn.innerHTML = '&#9998;'; // Pencil
+                    editBtn.title = "Edit sub-task";
+                    editBtn.addEventListener('click', () => {
+                        showEditSubtaskModal(task, subTask);
+                    });
+                    controlsWrapper.appendChild(editBtn);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn-delete-subtask';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.title = "Delete sub-task";
+                    deleteBtn.dataset.subtaskId = subTask.id;
+                    
+                    deleteBtn.addEventListener('click', () => {
+                        showDeleteSubtaskModal(task, subTask);
+                    });
+                    controlsWrapper.appendChild(deleteBtn);
+                    
+                    item.appendChild(controlsWrapper);
+                    subTaskListEl.appendChild(item);
+                });
+                
+                rightColumn.appendChild(subTaskListEl);
+                subTaskContainer.appendChild(rightColumn);
+            }
+
+            // --- Modal Content Generators & Handlers ---
+
+            function showAddPhaseModal() {
+                const colorOptions = createColorOptions('#757575'); // Default to grey
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Add New Phase Lane</h3>
+                    <form id="modal-add-phase-form" class="form-section">
+                        <label for="modal-phase-name">Phase Name</label>
+                        <input type="text" id="modal-phase-name" required>
+                        <label for="modal-phase-color">Phase Color</label>
+                        <select id="modal-phase-color">
+                            ${colorOptions}
+                        </select>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Phase</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                document.getElementById('modal-add-phase-form').onsubmit = handleAddPhaseSubmit;
+            }
+            
+            function handleAddPhaseSubmit(e) {
+                e.preventDefault();
+                const phaseName = document.getElementById('modal-phase-name').value;
+                const phaseColor = document.getElementById('modal-phase-color').value;
+                if (!phaseName) return;
+                const newPhase = { 
+                    id: Date.now(), 
+                    phaseName: phaseName, 
+                    color: phaseColor, 
+                    tasks: [] 
+                };
+                timelineData.push(newPhase);
+                renderAll();
+                closeModal();
+            }
+            
+            function showAddTaskModal() {
+                if (timelineData.length === 0) {
+                    showModal(`
+                        <button class="modal-close-btn">&times;</button>
+                        <h3>Error</h3>
+                        <p>Please add a phase lane first before adding a task.</p>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
+                        </div>
+                    `);
+                    return;
+                }
+                const phaseOptions = timelineData.map(phase => 
+                    `<option value="${phase.id}">${phase.phaseName}</option>`
+                ).join('');
+                
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Add New Task</h3>
+                    <form id="modal-add-task-form" class="form-section">
+                        <label for="modal-task-phase">Add to Phase</label>
+                        <select id="modal-task-phase" required>${phaseOptions}</select>
+                        <label for="modal-task-name">Task Name</label>
+                        <input type="text" id="modal-task-name" required>
+                        <label for="modal-task-description">Description</label>
+                        <textarea id="modal-task-description"></textarea>
+                        <label for="modal-task-assignee">Assign to (Optional)</label>
+                        <input type="text" id="modal-task-assignee" placeholder="e.g., John Doe">
+                        <label for="modal-task-link">Link (Optional)</label>
+                        <input type="text" id="modal-task-link" placeholder="https://...">
+                        <label for="modal-task-start">Start Date</label>
+                        <input type="date" id="modal-task-start" value="${formatDate(new Date())}" required>
+                        <label for="modal-task-end">End Date</label>
+                        <input type="date" id="modal-task-end" value="${formatDate(new Date())}" required>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Task</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                document.getElementById('modal-add-task-form').onsubmit = handleAddTaskSubmit;
+            }
+            
+            function handleAddTaskSubmit(e) {
+                e.preventDefault();
+                const phaseId = parseInt(document.getElementById('modal-task-phase').value);
+                const phase = timelineData.find(t => t.id === phaseId);
+                if (!phase) return;
+                
+                const startTime = document.getElementById('modal-task-start').value;
+                const endTime = document.getElementById('modal-task-end').value;
+
+                if (parseDate(endTime) < parseDate(startTime)) {
+                    showModal(`
+                        <button class="modal-close-btn">&times;</button>
+                        <h3>Error</h3>
+                        <p>End date must be on or after start date.</p>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
+                        </div>
+                    `);
+                    return;
+                }
+                
+                const newTask = {
+                    id: Date.now(),
+                    name: document.getElementById('modal-task-name').value,
+                    description: document.getElementById('modal-task-description').value,
+                    assignee: document.getElementById('modal-task-assignee').value,
+                    link: document.getElementById('modal-task-link').value,
+                    status: "ongoing", // Default status
+                    startTime: startTime, 
+                    endTime: endTime,
+                    subTasks: []
+                };
+                
+                phase.tasks.push(newTask);
+                renderAll();
+                closeModal();
+            }
+
+            function handleTaskClick(phaseId, taskId) {
+                selectedPhaseId = null;
+                selectedTaskInfo = { phaseId, taskId };
+                const task = findTask(phaseId, taskId);
+                if (task) {
+                    showTaskDetails(task);
+                }
+                updateControlBarVisibility();
+                renderAll();
+            }
+            
+            function handleDeselect() {
+                selectedPhaseId = null;
+                selectedTaskInfo = { phaseId: null, taskId: null };
+                hideTaskDetails();
+                updateControlBarVisibility();
+                renderAll();
+            }
+            
+            function handlePhaseSelect(phaseId) {
+                handleDeselect();
+                selectedPhaseId = phaseId;
+                updateControlBarVisibility();
+                renderAll();
+            }
+            
+            function handleEditTaskClick() {
+                const { phaseId, taskId } = selectedTaskInfo;
+                const task = findTask(phaseId, taskId);
+                if (task) {
+                    showEditTaskModal(phaseId, taskId, task);
+                }
+            }
+            
+            function handleEditPhaseClick() {
+                if (!selectedPhaseId) return;
+                const phase = timelineData.find(t => t.id === selectedPhaseId);
+                if (phase) {
+                    showEditPhaseModal(phase);
+                }
+            }
+            
+            function showEditPhaseModal(phase) {
+                const colorOptions = createColorOptions(phase.color || '#757575');
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Edit Phase</h3>
+                    <form id="modal-edit-phase-form" class="form-section">
+                        <label for="modal-edit-phase-name">Phase Name</label>
+                        <input type="text" id="modal-edit-phase-name" value="${phase.phaseName}" required>
+                        <label for="modal-edit-phase-color">Phase Color</label>
+                        <select id="modal-edit-phase-color">
+                            ${colorOptions}
+                        </select>
+                        <div class="modal-actions">
+                            <button type="button" id="modal-btn-delete-phase" class="btn btn-danger" style="margin-right: auto;">Delete Phase</button>
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                
+                document.getElementById('modal-edit-phase-form').onsubmit = (e) => {
+                    e.preventDefault();
+                    const newName = document.getElementById('modal-edit-phase-name').value;
+                    const newColor = document.getElementById('modal-edit-phase-color').value;
+                    if (newName) {
+                        phase.phaseName = newName;
+                        phase.color = newColor;
+                        renderAll();
+                        closeModal();
+                    }
+                };
+                document.getElementById('modal-btn-delete-phase').onclick = () => {
+                    showDeletePhaseModal(phase.id);
+                };
+            }
+            
+            function showDeletePhaseModal(phaseId) {
+                const phase = timelineData.find(t => t.id === phaseId);
+                if (!phase) return;
+                
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Delete Phase</h3>
+                    <p>Are you sure you want to delete "<strong>${phase.phaseName}</strong>"?</p>
+                    <p>This will also delete all ${phase.tasks.length} tasks. This cannot be undone.</p>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                        <button type="button" id="modal-btn-confirm-delete" class="btn btn-danger">Yes, Delete</button>
+                    </div>
+                `;
+                showModal(html);
+                document.getElementById('modal-btn-confirm-delete').onclick = () => {
+                    handleDeletePhase(phaseId);
+                    closeModal(); // Close confirmation modal
+                };
+            }
+            
+            function handleDeletePhase(phaseId) {
+                timelineData = timelineData.filter(t => t.id !== phaseId);
+                if (selectedPhaseId === phaseId) {
+                    handleDeselect();
+                }
+                renderAll();
+            }
+            
+            function showEditTaskModal(phaseId, taskId, task) {
+                const phaseOptions = timelineData.map(phase => 
+                    `<option value="${phase.id}" ${phase.id === phaseId ? 'selected' : ''}>${phase.phaseName}</option>`
+                ).join('');
+                
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Edit Task: ${task.name}</h3>
+                    <form id="modal-edit-task-form" class="form-section">
+                        <label for="modal-edit-phase">Phase</label>
+                        <select id="modal-edit-phase">${phaseOptions}</select>
+                    
+                        <label for="modal-edit-name">Name</label>
+                        <input type="text" id="modal-edit-name" value="${task.name}" required>
+                        
+                        <label for="modal-edit-description">Description</label>
+                        <textarea id="modal-edit-description">${task.description || ''}</textarea>
+                        
+                        <label for="modal-edit-assignee">Assign to (Optional)</label>
+                        <input type="text" id="modal-edit-assignee" value="${task.assignee || ''}" placeholder="e.g., John Doe">
+                        
+                        <label for="modal-edit-link">Link (Optional)</label>
+                        <input type="text" id="modal-edit-link" value="${task.link || ''}" placeholder="https://...">
+                        
+                        <label for="modal-edit-status">Task Status</label>
+                        <select id="modal-edit-status">
+                            <option value="ongoing">Ongoing</option>
+                            <option value="halted">Halted / Issues</option>
+                            <option value="failed">Failed</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        
+                        <label for="modal-edit-start">Start Date</label>
+                        <input type="date" id="modal-edit-start" value="${task.startTime}" required>
+                        <label for="modal-edit-end">End Date</label>
+                        <input type="date" id="modal-edit-end" value="${task.endTime}" required>
+                        <div class="modal-actions">
+                            <button type="button" id="modal-btn-delete" class="btn btn-danger" style="margin-right: auto;">Delete Task</button>
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                
+                document.getElementById('modal-edit-status').value = task.status || 'ongoing';
+                
+                document.getElementById('modal-edit-task-form').onsubmit = (e) => handleSaveTaskChanges(e, phaseId, taskId);
+                document.getElementById('modal-btn-delete').onclick = () => {
+                    const task = findTask(phaseId, taskId);
+                    showModal(`
+                        <button class="modal-close-btn">&times;</button>
+                        <h3>Delete Task</h3>
+                        <p>Are you sure you want to delete "<strong>${task.name}</strong>"?</p>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="button" id="modal-btn-confirm-delete-task" class="btn btn-danger">Yes, Delete</button>
+                        </div>
+                    `);
+                    document.getElementById('modal-btn-confirm-delete-task').onclick = () => handleDeleteTask(phaseId, taskId);
+                };
+            }
+            
+            function handleSaveTaskChanges(e, originalPhaseId, taskId) {
+                e.preventDefault();
+                
+                const newStartTime = document.getElementById('modal-edit-start').value;
+                const newEndTime = document.getElementById('modal-edit-end').value;
+                
+                if (parseDate(newEndTime) < parseDate(newStartTime)) {
+                    document.getElementById('modal-content').insertAdjacentHTML('beforeend', '<p style="color: var(--accent-red); margin-top: 10px;">Error: End date must be on or after start date.</p>');
+                    return;
+                }
+                
+                const newPhaseId = parseInt(document.getElementById('modal-edit-phase').value);
+                
+                // Find the task and update it
+                const oldPhase = timelineData.find(p => p.id === originalPhaseId);
+                const taskIndex = oldPhase.tasks.findIndex(t => t.id === taskId);
+                if (taskIndex === -1) return; // Task not found
+                
+                const task = oldPhase.tasks[taskIndex];
+                
+                task.name = document.getElementById('modal-edit-name').value;
+                task.description = document.getElementById('modal-edit-description').value;
+                task.assignee = document.getElementById('modal-edit-assignee').value;
+                task.link = document.getElementById('modal-edit-link').value;
+                task.status = document.getElementById('modal-edit-status').value;
+                task.startTime = newStartTime;
+                task.endTime = newEndTime;
+                
+                // Check if phase was changed
+                if (newPhaseId !== originalPhaseId) {
+                    // Remove task from old phase
+                    oldPhase.tasks.splice(taskIndex, 1);
+                    // Add task to new phase
+                    const newPhase = timelineData.find(p => p.id === newPhaseId);
+                    if (newPhase) {
+                        newPhase.tasks.push(task);
+                    }
+                    // Update selection to reflect new phase, otherwise task panel will be confused
+                    selectedTaskInfo.phaseId = newPhaseId;
+                }
+                
+                renderAll();
+                closeModal();
+            }
+            
+            function handleDeleteTask(phaseId, taskId) {
+                const phase = timelineData.find(t => t.id === phaseId);
+                if (phase) {
+                    phase.tasks = phase.tasks.filter(n => n.id !== taskId);
+                }
+                handleDeselect();
+                renderAll();
+                closeModal();
+            }
+
+            // --- Restored Project Modals ---
+            function showNewProjectModal() {
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Create New Project</h3>
+                    <p>Are you sure you want to create a new project?</p>
+                    <p>All unsaved data will be lost.</p>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                        <button type="button" id="modal-btn-confirm-new" class="btn btn-danger">Yes, Create New</button>
+                    </div>
+                `;
+                showModal(html);
+                document.getElementById('modal-btn-confirm-new').onclick = () => {
+                    handleNewProject();
+                    closeModal();
+                };
+            }
+        
+            function handleNewProject() {
+                projectName = "Untitled Project";
+                projectStartDate = new Date();
+                projectEndDate = new Date();
+                projectEndDate.setDate(projectEndDate.getDate() + 30); // 30-day default
+                
+                timelineData = [
+                    { id: Date.now(), phaseName: "To Do", color: "#757575", tasks: [] },
+                    { id: Date.now() + 1, phaseName: "In Progress", color: "#a1c6e1", tasks: [] },
+                    { id: Date.now() + 2, phaseName: "Done", color: "#8c9e83", tasks: [] }
+                ];
+                
+                handleDeselect();
+                renderAll();
+            }
+
+            // --- Restored Sub-task Modals ---
+            function handleAddSubtaskClick() {
+                const task = findTask(selectedTaskInfo.phaseId, selectedTaskInfo.taskId);
+                if (task) {
+                    showAddSubtaskModal(task);
+                }
+            }
+            
+            function showAddSubtaskModal(task) {
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Add Sub-task to "${task.name}"</h3>
+                    <form id="modal-add-subtask-form" class="form-section">
+                        <label for="modal-subtask-name">Sub-task Name</label>
+                        <input type="text" id="modal-subtask-name" required>
+                        <label for="modal-subtask-description">Description (Optional)</label>
+                        <textarea id="modal-subtask-description" rows="3"></textarea>
+                        <label for="modal-subtask-status">Status</label>
+                        <select id="modal-subtask-status">
+                            <option value="ongoing">Ongoing</option>
+                            <option value="halted">Halted / Issues</option>
+                            <option value="failed">Failed</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Sub-task</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                document.getElementById('modal-add-subtask-form').onsubmit = (e) => {
+                    e.preventDefault();
+                    const text = document.getElementById('modal-subtask-name').value;
+                    const description = document.getElementById('modal-subtask-description').value;
+                    const status = document.getElementById('modal-subtask-status').value;
+                    if (text) {
+                        const newSubtask = { 
+                            id: Date.now(), 
+                            text: text, 
+                            status: status, 
+                            description: description 
+                        };
+                        task.subTasks.push(newSubtask);
+                        renderTaskDetails(task);
+                        closeModal();
+                    }
+                };
+            }
+            
+            function showEditSubtaskModal(task, subTask) {
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Edit Sub-task</h3>
+                    <form id="modal-edit-subtask-form" class="form-section">
+                        <label for="modal-subtask-name">Sub-task Name</label>
+                        <input type="text" id="modal-subtask-name" value="${subTask.text}" required>
+                        <label for="modal-subtask-description">Description (Optional)</label>
+                        <textarea id="modal-subtask-description" rows="3">${subTask.description || ''}</textarea>
+                        <label for="modal-subtask-status">Status</label>
+                        <select id="modal-subtask-status">
+                            <option value="ongoing">Ongoing</option>
+                            <option value="halted">Halted / Issues</option>
+                            <option value="failed">Failed</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                `;
+                showModal(html);
+                
+                document.getElementById('modal-subtask-status').value = subTask.status || 'ongoing';
+                
+                document.getElementById('modal-edit-subtask-form').onsubmit = (e) => {
+                    e.preventDefault();
+                    const newText = document.getElementById('modal-subtask-name').value;
+                    const newDescription = document.getElementById('modal-subtask-description').value;
+                    const newStatus = document.getElementById('modal-subtask-status').value;
+                    if (newText) {
+                        subTask.text = newText;
+                        subTask.description = newDescription;
+                        subTask.status = newStatus;
+                        renderTaskDetails(task);
+                        closeModal();
+                    }
+                };
+            }
+            
+            function showDeleteSubtaskModal(task, subTask) {
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Delete Sub-task</h3>
+                    <p>Are you sure you want to delete "<strong>${subTask.text}</strong>"?</p>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                        <button type="button" id="modal-btn-confirm-delete-subtask" class="btn btn-danger">Yes, Delete</button>
+                    </div>
+                `;
+                showModal(html);
+                document.getElementById('modal-btn-confirm-delete-subtask').onclick = () => {
+                    task.subTasks = task.subTasks.filter(st => st.id !== subTask.id);
+                    renderTaskDetails(task);
+                    closeModal();
+                };
+            }
+
+            // --- Restored Control Bar Visibility Function ---
+            function updateControlBarVisibility() {
+                if (selectedTaskInfo.taskId !== null) {
+                    editTaskBtn.classList.remove('hidden');
+                } else {
+                    editTaskBtn.classList.add('hidden');
+                }
+                
+                if (selectedPhaseId !== null) {
+                    editPhaseBtn.classList.remove('hidden');
+                } else {
+                    editPhaseBtn.classList.add('hidden');
+                }
+            }
+
+            // --- New and Restored Functions ---
+            
+            function downloadFile(filename, content, mimeType) {
+                const blob = new Blob([content], {type: mimeType});
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            
+            function handleShowJSON() {
+                const data = {
+                    projectName: projectName,
+                    projectStartDate: formatDate(projectStartDate),
+                    projectEndDate: formatDate(projectEndDate),
+                    timelineData: timelineData
+                };
+                const jsonString = JSON.stringify(data, null, 2);
+                const html = `
+                    <button class="modal-close-btn">&times;</button>
+                    <h3>Show JSON</h3>
+                    <p>Copy the data below to save your project.</p>
+                    <textarea id="json-export-textarea" readonly>${jsonString}</textarea>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-primary btn-cancel">Done</button>
+                    </div>
+                `;
+                showModal(html);
+                document.getElementById('json-export-textarea').select();
+            }
+            
+            function handleSaveJSON() {
+                const data = {
+                    projectName: projectName,
+                    projectStartDate: formatDate(projectStartDate),
+                    projectEndDate: formatDate(projectEndDate),
+                    timelineData: timelineData
+                };
+                const jsonString = JSON.stringify(data, null, 2);
+                downloadFile(`${projectName.replace(/[^a-z0-9]/gi, '_') || 'project'}.json`, jsonString, 'application/json');
+            }
+            
+            function handleExportReport() {
+                const todayStr = getTodayGmt8(); // YYYY-MM-DD
+                
+                // Reformat date for header
+                const [year, month, day] = todayStr.split('-');
+                const headerDate = `${day} - ${month} - ${year}`;
+                
+                let mdContent = `Task Status - ${headerDate}\n\n`; // Changed header
+
+                let tasksFound = false;
+                
+                const statusEmojis = {
+                    ongoing: '⏳',
+                    halted: '⚠️'
+                };
+
+                // 1. Group active tasks by assignee
+                const tasksByAssignee = {};
+                
+                timelineData.forEach(phase => {
+                    const activeTasks = phase.tasks.filter(task => 
+                        task.status === 'ongoing' || task.status === 'halted'
+                    );
+
+                    activeTasks.forEach(task => {
+                        const assigneeKey = task.assignee ? `[ ${task.assignee} ]` : '[ Unassigned ]';
+                        if (!tasksByAssignee[assigneeKey]) {
+                            tasksByAssignee[assigneeKey] = [];
+                        }
+                        // Add phaseName to task for later grouping
+                        tasksByAssignee[assigneeKey].push({ ...task, phaseName: phase.phaseName });
+                    });
+                });
+
+                // 2. Iterate through assignees and print their tasks
+                for (const assigneeKey in tasksByAssignee) {
+                    tasksFound = true;
+                    mdContent += `**${assigneeKey}**\n\n`; // Assignee name
+
+                    // Group tasks for this assignee by phase
+                    const tasksByPhase = {};
+                    tasksByAssignee[assigneeKey].forEach(task => {
+                        if (!tasksByPhase[task.phaseName]) {
+                            tasksByPhase[task.phaseName] = [];
+                        }
+                        tasksByPhase[task.phaseName].push(task);
+                    });
+
+                    // Print tasks grouped by phase
+                    for (const phaseName in tasksByPhase) {
+                        mdContent += `**${phaseName}**\n\n`; // Phase name as bold
+
+                        tasksByPhase[phaseName].forEach(task => {
+                            const taskEmoji = statusEmojis[task.status] || '';
+                            mdContent += `- ${taskEmoji} ${task.name}  \n`; // Added double space
+                            
+                            if (task.link) {
+                                mdContent += `  [ ${task.link} ]\n`;
+                            }
+                            if (task.description) {
+                                // Indent all lines of description
+                                const indentedDesc = task.description.split('\n').map(line => `  ${line}`).join('\n');
+                                mdContent += `${indentedDesc}\n`;
+                            }
+
+                            // Find sub-tasks that are also ongoing or halted
+                            const activeSubTasks = task.subTasks.filter(sub =>
+                                sub.status === 'ongoing' || sub.status === 'halted'
+                            );
+
+                            if (activeSubTasks.length > 0) {
+                                activeSubTasks.forEach(sub => {
+                                    const subTaskEmoji = statusEmojis[sub.status] || '';
+                                    mdContent += `  - ${subTaskEmoji} ${sub.text}  \n`; // Added double space
+                                    if (sub.description) {
+                                        // Indent all lines of sub-description
+                                        const indentedSubDesc = sub.description.split('\n').map(line => `    ${line}`).join('\n');
+                                        mdContent += `${indentedSubDesc}\n`; // 4 spaces
+                                    }
+                                });
+                            }
+                            mdContent += "\n"; // Add space after each task
+                        });
+                    }
+                }
+
+                if (!tasksFound) {
+                    mdContent += "*No ongoing or halted tasks found for today.*";
+                }
+
+                downloadFile(`Report-${projectName}-${todayStr}.md`, mdContent, 'text/markdown');
+            }
+
+            function handleLoadJSON(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data && data.projectName && data.timelineData && data.projectStartDate && data.projectEndDate) {
+                            projectName = data.projectName;
+                            projectStartDate = parseDate(data.projectStartDate);
+                            projectEndDate = parseDate(data.projectEndDate);
+                            timelineData = data.timelineData;
+                            handleDeselect();
+                            renderAll();
+                        } else {
+                            showModal(`
+                                <button class="modal-close-btn">&times;</button>
+                                <h3>Load Error</h3>
+                                <p>Invalid project JSON file. Missing required data.</p>
+                                <div class="modal-actions">
+                                    <button type="button" class="btn btn-secondary btn-cancel">OK</button>
+                                </div>
+                            `);
+                        }
+                    } catch (err) {
+                        showModal(`
+                            <button class="modal-close-btn">&times;</button>
+                            <h3>Load Error</h3>
+                            <p>Error reading file: ${err.message}</p>
+                            <div class="modal-actions">
+                                <button type="button" class="btn btn-secondary btn-cancel">OK</button>
+                            </div>
+                        `);
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = null;
+            }
+
+            
+            function handleSetDates() {
+                const start = parseDate(startDateInput.value);
+                const end = parseDate(endDateInput.value);
+                
+                if (end < start) {
+                    showModal(`
+                        <button class="modal-close-btn">&times;</button>
+                        <h3>Error</h3>
+                        <p>End date must be on or after start date.</p>
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
+                        </div>
+                    `);
+                    startDateInput.value = formatDate(projectStartDate);
+                    endDateInput.value = formatDate(projectEndDate);
+                    return;
+                }
+                
+                projectStartDate = start;
+                projectEndDate = end;
+                renderAll();
+            }
+            
+            // --- Initial Setup ---
+            function init() {
+                addPhaseBtn.addEventListener('click', showAddPhaseModal);
+                addTaskBtn.addEventListener('click', showAddTaskModal);
+                showJsonBtn.addEventListener('click', handleShowJSON);
+                saveJsonBtn.addEventListener('click', handleSaveJSON);
+                loadJsonBtn.addEventListener('click', () => loadJsonInput.click());
+                loadJsonInput.addEventListener('change', handleLoadJSON);
+                newProjectBtn.addEventListener('click', showNewProjectModal); // Added this
+                btnExportReport.addEventListener('click', handleExportReport); 
+                
+                editTaskBtn.addEventListener('click', handleEditTaskClick);
+                editPhaseBtn.addEventListener('click', handleEditPhaseClick);
+                addSubtaskBtn.addEventListener('click', handleAddSubtaskClick); // Added this
+                taskCloseBtn.addEventListener('click', handleDeselect);
+                dateSetBtn.addEventListener('click', handleSetDates);
+                
+                projectNameInput.addEventListener('change', (e) => {
+                    projectName = e.target.value || "Untitled Project";
+                    document.title = projectName;
+                });
+                
+                modalBackdrop.addEventListener('click', (e) => {
+                    if (e.target === modalBackdrop) closeModal();
+                });
+                
+                tracksContainer.addEventListener('click', (e) => {
+                   if (e.target === tracksContainer) handleDeselect(); 
+                });
+                
+                renderAll();
+            }
+            
+            init();
+        });
+    </script>
+
+</body>
+</html>
