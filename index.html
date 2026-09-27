@@ -1,1961 +1,596 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Timeline Tracker</title>
-    <style>
-        /* --- General Layout --- */
-        :root {
-            --bg-color-darkest: #202020;
-            --bg-color-dark: #2b2b2b;
-            --bg-color-medium: #3c3c3c;
-            --bg-color-light: #4a4a4a;
-            --text-color: #e0e0e0;
-            --text-color-muted: #999;
-            --primary-color: #4fc3f7; /* Ongoing */
-            --accent-green: #81c784; /* Completed */
-            --accent-orange: #ffb74d; /* Halted */
-            --accent-purple: #ba68c8;
-            --accent-red: #e57373; /* Failed / Today */
-            --accent-grey: #90a4ae;
-            --task-header-width: 170px;
-        }
-
-        body {
-            font-family: "SF Mono", "Consolas", "Menlo", "Courier New", monospace;
-            background-color: var(--bg-color-darkest);
-            color: var(--text-color);
-            margin: 0;
-            padding: 15px;
-            overflow: hidden;
-        }
-
-        h2, h3 {
-            border-bottom: 2px solid var(--bg-color-light);
-            padding-bottom: 5px;
-            color: var(--primary-color);
-            margin-top: 0;
-        }
-
-        /* --- Main Page Layout --- */
-        .page-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: 1fr auto;
-            height: calc(100vh - 30px);
-            gap: 10px;
-            max-width: 100vw;
-            box-sizing: border-box;
-        }
-
-        .main-panel {
-            background-color: var(--bg-color-dark);
-            border-radius: 8px;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            grid-row: 1;
-            min-width: 0; 
-        }
-        
-        /* Main Controls Layout */
-        .main-controls-grid {
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            gap: 15px;
-            align-items: center;
-            width: 100%;
-        }
-        
-        #project-controls, #standard-controls, #contextual-controls, #date-range-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        #project-name {
-            background: var(--bg-color-darkest);
-            border: 1px solid var(--bg-color-light);
-            color: var(--text-color);
-            border-radius: 5px;
-            padding: 8px;
-            font-family: inherit;
-            font-size: 1.1em;
-            width: 150px;
-        }
-        
-        #contextual-controls {
-            justify-self: center;
-        }
-
-        #standard-date-range-wrapper {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-self: end;
-        }
-        
-        #date-range-controls {
-             border-left: 2px solid var(--bg-color-light);
-             padding-left: 10px;
-        }
-        #date-range-controls label {
-            font-size: 0.9em;
-            color: var(--text-color-muted);
-        }
-        #date-range-controls input[type="date"] {
-            background: var(--bg-color-darkest);
-            border: 1px solid var(--bg-color-light);
-            color: var(--text-color);
-            border-radius: 5px;
-            padding: 6px;
-            font-family: inherit;
-        }
-        #project-date-set {
-            padding: 8px 12px;
-        }
-
-
-        /* --- Buttons & Forms --- */
-        .btn {
-            padding: 10px 15px;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-            color: #111;
-            font-family: inherit;
-            white-space: nowrap;
-        }
-        .btn-primary { background-color: var(--primary-color); }
-        .btn-primary:hover { background-color: #29b6f6; }
-        .btn-secondary { background-color: var(--accent-grey); }
-        .btn-secondary:hover { background-color: #78909c; }
-        .btn-danger { background-color: var(--accent-red); }
-        .btn-danger:hover { background-color: #ef5350; }
-        .btn-subtask-add {
-            background-color: var(--accent-green);
-            color: #111;
-            padding: 10px 15px;
-            font-size: 0.9em;
-        }
-        
-        .form-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .form-section label {
-            font-weight: bold;
-            font-size: 0.9em;
-            color: var(--text-color-muted);
-            margin-bottom: -5px;
-        }
-        .form-section input,
-        .form-section select,
-        .form-section textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid var(--bg-color-light);
-            background-color: var(--bg-color-darkest);
-            color: var(--text-color);
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-        .form-section textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
-        .form-section input[type="date"] {
-            color-scheme: dark;
-        }
-        .form-section input[type="color"] {
-            padding: 5px; /* Color input needs different padding */
-            min-height: 40px;
-        }
-
-        /* --- Modal System --- */
-        .modal-backdrop {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow-y: auto; /* Allow modal to scroll if content is tall */
-            padding: 20px 0;
-        }
-        .modal-content {
-            background-color: var(--bg-color-dark);
-            border-radius: 8px;
-            padding: 25px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            position: relative;
-            margin: auto; /* Center in scrollable view */
-        }
-        .modal-close-btn {
-            position: absolute;
-            top: 10px; right: 15px;
-            background: none; border: none;
-            color: var(--text-color-muted);
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .modal-close-btn:hover { color: var(--text-color); }
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-        
-        #json-export-textarea {
-            width: 100%;
-            height: 300px;
-            background-color: var(--bg-color-darkest);
-            color: var(--text-color);
-            border: 1px solid var(--bg-color-light);
-            border-radius: 5px;
-            padding: 10px;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
-
-        /* --- Timeline Visualizer --- */
-        #timeline-visualizer {
-            flex-grow: 1;
-            position: relative;
-            background-color: var(--bg-color-darkest);
-            border-radius: 5px;
-            border: 1px solid var(--bg-color-light);
-            overflow: auto;
-        }
-        
-        #timeline-ruler-wrapper {
-            position: sticky;
-            top: 0;
-            height: 30px;
-            z-index: 20;
-            display: flex;
-        }
-        #timeline-ruler-corner {
-            width: var(--task-header-width);
-            min-width: var(--task-header-width);
-            background-color: var(--bg-color-darkest);
-            border-bottom: 1px solid var(--bg-color-light);
-        }
-        #timeline-ruler {
-            position: relative;
-            height: 30px;
-            background-color: var(--bg-color-darkest);
-            border-bottom: 1px solid var(--bg-color-light);
-            box-sizing: border-box;
-        }
-        .time-marker {
-            position: absolute;
-            font-size: 0.8em;
-            color: var(--text-color-muted);
-            transform: translateX(-50%);
-            top: 10px;
-            white-space: nowrap;
-        }
-        .time-marker::before {
-            content: '';
-            position: absolute;
-            width: 1px;
-            background: var(--bg-color-medium);
-            top: -10px; left: 50%;
-            z-index: -1;
-        }
-        .month-marker::before { height: 100vh; background: var(--bg-color-light); }
-        .week-marker::before { height: 100vh; }
-        .day-marker { font-size: 0.7em; color: #666; }
-        .day-marker::before { height: 5px; top: -5px; background: #555; }
-
-        .time-marker.today-label {
-            color: var(--accent-red);
-            font-weight: bold;
-        }
-        #today-marker-line {
-            position: absolute;
-            width: 2px;
-            height: 100vh; /* Will be clipped by container */
-            background-color: var(--accent-red);
-            top: 0;
-            z-index: 10; /* Below sticky headers, above tracks */
-            pointer-events: none;
-        }
-
-        #timeline-tracks-container {
-            position: relative;
-            height: auto;
-            min-height: 100%;
-        }
-        
-        .timeline-track {
-            display: flex;
-            border-bottom: 1px solid var(--bg-color-light);
-            background-color: var(--bg-color-dark);
-        }
-        
-        .track-header {
-            width: var(--task-header-width);
-            min-width: var(--task-header-width);
-            padding: 10px;
-            background-color: var(--bg-color-medium);
-            font-weight: bold;
-            font-size: 0.9em;
-            border-right: 1px solid var(--bg-color-light);
-            position: sticky;
-            left: 0;
-            z-index: 15;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            cursor: pointer;
-            /* Default color, will be overridden by JS */
-            background-color: var(--bg-color-medium); 
-            color: var(--text-color);
-            transition: background-color 0.2s, color 0.2s;
-        }
-        .track-header.selected {
-            /* Use a light color for selection to contrast with custom bg */
-            background-color: #ffffff; 
-            color: #111;
-            box-shadow: 0 0 10px #fff;
-        }
-        
-        .track-body {
-            position: relative;
-            flex-grow: 1;
-            height: auto;
-            min-height: 40px;
-            cursor: pointer; 
-        }
-
-        .timeline-node-clip {
-            position: absolute;
-            height: 25px;
-            border-radius: 4px;
-            border: 1px solid #000;
-            color: #111;
-            font-size: 0.9em;
-            font-weight: bold;
-            white-space: nowrap;
-            box-sizing: border-box;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            padding: 0 8px;
-            top: 8px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .timeline-node-clip.selected {
-            border: 2px solid #fff;
-            box-shadow: 0 0 10px #fff;
-            z-index: 12;
-        }
-        
-        .task-link-icon {
-            color: #111;
-            text-decoration: none;
-            margin-left: 5px;
-            font-weight: bold;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-        .task-link-icon:hover {
-            opacity: 1;
-        }
-        
-        /* Task Status Colors */
-        .timeline-node-clip.task-status-ongoing { background-color: var(--primary-color); }
-        .timeline-node-clip.task-status-halted { background-color: var(--accent-orange); }
-        .timeline-node-clip.task-status-failed { background-color: var(--accent-red); }
-        .timeline-node-clip.task-status-completed { background-color: var(--accent-green); opacity: 0.7; }
-
-        
-        /* --- Task Details Panel --- */
-        
-        #task-details-panel {
-            grid-row: 2;
-            background-color: var(--bg-color-dark);
-            border-radius: 8px;
-            padding: 15px;
-            box-sizing: border-box;
-            position: relative;
-            max-height: 300px;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-        
-        #task-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 1px solid var(--bg-color-light);
-            padding-bottom: 10px;
-            margin-bottom: 5px;
-            flex-shrink: 0;
-            gap: 15px;
-        }
-        #task-header-left {
-            flex-grow: 1;
-        }
-        #task-panel-title {
-            border: none;
-            padding: 0;
-            margin: 0;
-            color: var(--primary-color);
-        }
-        #task-info-bar {
-            font-size: 0.9em;
-            color: var(--text-color-muted);
-            margin-top: 5px;
-            height: 1.2em;
-        }
-        #task-header-right {
-            display: flex;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        
-        #sub-task-container {
-            flex-grow: 1;
-            overflow: hidden;
-            display: flex;
-            gap: 15px;
-            padding-top: 10px;
-        }
-
-        .task-details-column {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            background: var(--bg-color-darkest);
-            border-radius: 4px;
-            padding: 10px 15px;
-        }
-        
-        #task-description-display {
-            background: none;
-            padding: 0;
-            margin: 0 0 15px 0;
-        }
-        #task-description-display h4 {
-            margin: 0 0 5px 0;
-            color: var(--primary-color);
-            font-size: 0.9em;
-        }
-        #task-description-display p {
-            margin: 0;
-            font-size: 0.9em;
-            color: var(--text-color);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        #sub-task-list {
-            position: relative;
-            user-select: none;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-bottom: 10px;
-        }
-        
-        .sub-task-item {
-            display: flex;
-            align-items: flex-start; /* Align to top */
-            gap: 10px;
-            background: var(--bg-color-dark);
-            padding: 10px;
-            border-radius: 4px;
-        }
-        
-        .subtask-status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            margin-top: 5px; /* Align with text */
-        }
-        /* Subtask Status Colors */
-        .subtask-status-dot.task-status-ongoing { background-color: var(--primary-color); }
-        .subtask-status-dot.task-status-halted { background-color: var(--accent-orange); }
-        .subtask-status-dot.task-status-failed { background-color: var(--accent-red); }
-        .subtask-status-dot.task-status-completed { background-color: var(--accent-green); }
-
-        .sub-task-info {
-            flex-grow: 1;
-        }
-        .sub-task-item label {
-            font-size: 0.9em;
-            color: var(--text-color);
-            word-break: break-word;
-        }
-        .sub-task-item.status-completed label {
-            text-decoration: line-through;
-            color: var(--text-color-muted);
-        }
-        
-        .sub-task-description-display {
-            font-size: 0.8em;
-            color: var(--text-color-muted);
-            padding-left: 2px;
-            margin-top: 4px;
-            word-break: break-word;
-            white-space: pre-wrap;
-        }
-        .sub-task-description-display:empty {
-            display: none;
-        }
-        
-        .sub-task-controls {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .btn-edit-subtask,
-        .btn-delete-subtask {
-            background: none;
-            border: none;
-            color: var(--text-color-muted);
-            border-radius: 3px;
-            width: 20px;
-            height: 20px;
-            line-height: 20px;
-            text-align: center;
-            font-weight: bold;
-            cursor: pointer;
-            flex-shrink: 0;
-            font-size: 1.1em;
-            margin-top: -2px; /* Align with dot */
-        }
-        .btn-edit-subtask {
-            font-size: 0.9em;
-            line-height: 22px;
-        }
-        
-        .btn-edit-subtask:hover {
-            background: var(--primary-color);
-            color: #111;
-        }
-        .btn-delete-subtask:hover {
-            background: var(--accent-red);
-            color: #111;
-        }
-        
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作时间轴</title>
+<style>
+:root{--bg:#171c27;--panel:#222a38;--text:#edf2f8;--muted:#a6b3c4;--grid:#384456;--month:#7392b3;--today:#f48080;--cursor:#7fd5e5;--ongoing:#69b9ee;--halted:#f0b66c;--failed:#d77993;--completed:#8cc9a3;--accent:#7fd5e5;--field:color-mix(in srgb,var(--panel) 75%,var(--bg));--shadow:rgba(0,0,0,.18)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Microsoft YaHei",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}input,textarea,select{background:var(--field);color:var(--text);border:1px solid var(--grid);border-radius:7px;padding:8px;min-width:0}textarea{resize:vertical}button{background:var(--panel);color:var(--text);border:1px solid var(--grid);border-radius:7px;padding:7px 11px}button:hover{border-color:var(--accent)}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--cursor);outline-offset:1px}.primary{background:var(--accent);border-color:var(--accent);color:#16212c;font-weight:700}.quiet{background:transparent}.danger{color:var(--today)}.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:12px}.app{display:flex;flex-direction:column;height:100dvh;min-height:400px;overflow:hidden}.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--grid);background:var(--panel);z-index:8}.toolbar #workspace-name{width:166px;font-weight:700}.toolbar .grow{flex:1}.toolbar .search-field{width:225px}.status{font-size:12px;white-space:nowrap;color:var(--muted)}.status.dirty{color:var(--halted)}.workspace{display:flex;flex:1;min-height:0}.left{display:flex;flex-direction:column;min-width:260px;flex:1;overflow:hidden}.timeline-panel{display:flex;flex-direction:column;min-height:120px;flex:1;background:var(--panel)}.timeline-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--grid)}.timeline-actions .grow{flex:1}.timeline-actions input[type=date]{width:147px}.timeline-actions select{width:83px}.timeline-scroll{flex:1;min-height:0;overflow:auto;background:var(--bg);scrollbar-color:var(--grid) transparent;scrollbar-width:thin}.timeline-scroll::-webkit-scrollbar,.details::-webkit-scrollbar,.journal::-webkit-scrollbar{width:8px;height:8px}.timeline-scroll::-webkit-scrollbar-thumb,.details::-webkit-scrollbar-thumb,.journal::-webkit-scrollbar-thumb{background:var(--grid);border-radius:8px}.ruler-row{position:sticky;top:0;display:flex;z-index:5;height:59px;background:var(--panel)}.ruler-corner{position:sticky;left:0;z-index:8;flex:none;width:158px;border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:17px 12px;color:var(--muted);background:var(--panel)}.ruler{position:relative;flex:none;touch-action:none;cursor:crosshair;border-bottom:1px solid var(--grid)}.month-span{position:absolute;top:0;height:26px;display:flex;align-items:center;padding-left:8px;border-left:2px solid var(--month);color:var(--text);font-weight:600;background:color-mix(in srgb,var(--month) 12%,transparent);pointer-events:none}.day-tick{position:absolute;top:28px;color:var(--muted);font-size:11px;transform:translateX(-50%);pointer-events:none}.day-tick.week{color:var(--text)}.date-cursor{position:absolute;top:27px;width:2px;height:calc(var(--track-height, 200px) + 32px);background:var(--cursor);z-index:4;pointer-events:none}.date-cursor:before{content:'▼';position:absolute;top:-4px;left:-7px;font-size:17px;color:var(--cursor)}.today-line{position:absolute;top:58px;width:2px;height:var(--track-height, 200px);background:var(--today);z-index:2;pointer-events:none}.track-row{display:flex;min-height:56px;border-bottom:1px solid var(--grid)}.track-name{position:sticky;left:0;z-index:3;flex:none;width:158px;padding:10px 8px;border-right:1px solid var(--grid);background:var(--panel);display:flex;gap:6px;align-items:center}.track-name .phase-edit{flex:1;text-align:left;white-space:normal;word-break:break-word;background:transparent;border:0;padding:4px;color:var(--text)}.phase-dot{width:11px;height:11px;flex:none;border-radius:50%}.track-body{position:relative;flex:none;min-height:56px;background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px);background-size:var(--day-px) 100%;background-position:left top;cursor:grab}.track-body.panning{cursor:grabbing}.task-bar{position:absolute;height:28px;padding:4px 9px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#14202b;font-weight:700;box-shadow:0 2px 5px var(--shadow);border:2px solid transparent;cursor:pointer}.task-bar.selected{border-color:var(--text);z-index:2}.task-bar[data-status=ongoing]{background:var(--ongoing)}.task-bar[data-status=halted]{background:var(--halted)}.task-bar[data-status=failed]{background:var(--failed)}.task-bar[data-status=completed]{background:var(--completed)}.empty-lane{position:absolute;top:17px;left:15px;color:var(--muted);pointer-events:none}.split-v{height:9px;flex:none;background:var(--bg);cursor:row-resize;position:relative}.split-h{width:9px;flex:none;background:var(--bg);cursor:col-resize;position:relative}.split-v:after,.split-h:after{content:'';position:absolute;background:var(--muted);border-radius:3px;opacity:.6}.split-v:after{width:48px;height:3px;left:calc(50% - 24px);top:3px}.split-h:after{height:48px;width:3px;top:calc(50% - 24px);left:3px}.details{height:35%;min-height:52px;overflow:auto;padding:12px 15px;background:var(--panel);container-type:inline-size}.details.collapsed{height:52px!important;overflow:hidden}.details-head,.journal-head{display:flex;gap:8px;align-items:center}.details-head h2,.journal-head h2{font-size:16px;margin:0}.details-head .grow,.journal-head .grow{flex:1}.details-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-top:12px}.details-col{min-width:0}.details-col h3,.log-block h3{font-size:14px;margin:0 0 7px;color:var(--accent)}.task-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field{display:flex;flex-direction:column;gap:4px;min-width:0}.field.wide{grid-column:1/-1}.field label{font-size:12px;color:var(--muted)}.field input,.field select,.field textarea{width:100%}.field textarea{min-height:90px}.sub-item{display:flex;align-items:center;gap:7px;margin-bottom:7px}.sub-item input[type=checkbox]{width:17px;height:17px;flex:none;accent-color:var(--completed)}.sub-item input[type=text]{flex:1}.sub-item button{padding:5px 8px}.details-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:13px}.journal{width:30%;min-width:280px;max-width:55vw;padding:14px;overflow:auto;background:var(--panel);scrollbar-color:var(--grid) transparent;scrollbar-width:thin}.journal.collapsed{width:42px!important;min-width:42px;padding:8px 3px;overflow:hidden}.journal.collapsed>*:not(.journal-head){display:none}.journal.collapsed .journal-head{writing-mode:vertical-rl;gap:8px}.journal.collapsed .journal-head>*:not(#journal-toggle){display:none}.journal-date{display:flex;align-items:center;gap:5px;margin:13px 0}.journal-date input{flex:1}.journal-date button{white-space:nowrap}.related{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}.related button{font-size:12px;padding:4px 7px}.log-block{margin:13px 0}.entries{display:flex;flex-direction:column;gap:6px}.entry{display:flex;align-items:flex-start;gap:6px}.entry .number{width:20px;flex:none;color:var(--muted);padding-top:8px;text-align:right}.entry textarea{flex:1;min-height:39px;resize:vertical}.entry button{padding:7px}.log-block>button{margin:7px 0 0 26px}.notes{width:100%;min-height:110px}.result-panel{position:fixed;top:58px;right:15px;width:min(510px,calc(100vw - 30px));max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:12px;z-index:15;box-shadow:0 14px 35px var(--shadow)}.result-row{display:block;width:100%;text-align:left;margin:5px 0;padding:9px;white-space:normal;word-break:break-word}.result-row mark{background:var(--halted);color:#111}.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:9px 0}.tabs button.active{border-color:var(--accent);color:var(--accent)}.modal-cover{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:30;padding:15px}.modal{width:min(550px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--grid);border-radius:12px;padding:18px}.modal h2{font-size:18px;margin:0 0 15px}.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:15px}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.color-field{display:flex;justify-content:space-between;align-items:center;gap:8px}.color-field input{width:66px;height:38px;padding:3px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:50;background:var(--panel);padding:10px 15px;border:1px solid var(--accent);border-radius:8px;box-shadow:0 5px 20px var(--shadow)}
+@container (max-width:740px){.details-grid{grid-template-columns:1fr}.task-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}@container (max-width:430px){.task-fields{grid-template-columns:1fr}}@media(max-width:700px){.toolbar{gap:5px}.toolbar .search-field{width:150px}.journal{min-width:200px}.left{min-width:180px}.timeline-actions{gap:4px}.ruler-corner,.track-name{width:116px}}
+/* 表单颜色统一跟随主题，日期选择器使用对应的浏览器控件颜色。 */
+input,textarea,select{background-color:var(--field);color:var(--text)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
+select option{background-color:var(--panel);color:var(--text)}
+input:-webkit-autofill{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 0 0 1000px var(--field) inset}
+.range-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border-left:1px solid var(--grid);padding-left:9px}
+.range-controls label{color:var(--muted);font-size:12px;white-space:nowrap}
+.range-controls input[type=date]{width:137px}
+.timeline-actions .zoom-controls{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.zoom-controls input[type=range]{width:132px;padding:0;border:0;background:transparent;accent-color:var(--cursor);cursor:pointer}
+.zoom-controls button{width:28px;height:32px;padding:0;font-size:18px;line-height:1}
+.phase-swatch,#phase-color{width:22px!important;height:22px!important;min-width:22px;flex:none;padding:0!important;border:1px solid var(--grid);border-radius:4px;cursor:pointer;appearance:none;background:none}
+.phase-swatch::-webkit-color-swatch-wrapper,#phase-color::-webkit-color-swatch-wrapper{padding:0}
+.phase-swatch::-webkit-color-swatch,#phase-color::-webkit-color-swatch{border:0;border-radius:3px}
+.phase-swatch::-moz-color-swatch,#phase-color::-moz-color-swatch{border:0;border-radius:3px}
+.phase-color-field{display:flex;align-items:center;gap:10px}
+.toolbar #save{background:var(--save-color);border-color:var(--save-color);color:var(--save-text)}
+.timeline-actions #add-task{background:var(--task-color);border-color:var(--task-color);color:var(--task-text)}
+.details-col h3,.log-block h3{color:var(--text)}
+.build-badge{border:1px solid var(--cursor);color:var(--cursor);border-radius:6px;padding:5px 7px;font-size:12px;white-space:nowrap}
+.month-span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ruler-corner{z-index:12}
+.track-name{z-index:6}
+.day-tick{top:29px;transform:none;height:25px;display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.day-tick.week-start{font-weight:800;color:var(--text)}
+.day-tick.selected{z-index:3;min-width:24px;padding:0 2px;border-radius:5px;background:var(--cursor);color:#15232e;font-weight:800;box-shadow:0 1px 5px var(--shadow)}
+.day-tick.today-label:not(.selected){color:var(--today);font-weight:700}
+.track-body{overflow:hidden}
+.week-divider,.cursor-track-line,.today-track-line{position:absolute;top:0;bottom:0;pointer-events:none}
+.week-divider{border-left:1px solid var(--month);opacity:.45;z-index:0}
+.cursor-track-line{width:2px;background:var(--cursor);z-index:1}
+.today-track-line{width:2px;background:var(--today);opacity:.8;z-index:1}
+.task-bar{z-index:2}
+.task-bar.selected{z-index:3}
+.task-bar,.phase-handle{touch-action:none;user-select:none}
+.task-bar{cursor:grab}
+.task-bar:active,.phase-handle:active{cursor:grabbing}
+.phase-handle{flex:none;width:20px;padding:4px 1px;line-height:1.1;border:0;background:transparent;color:var(--muted);cursor:grab}
+.task-resize-handle{position:absolute;top:0;bottom:0;width:9px;z-index:4;cursor:ew-resize;touch-action:none}
+.task-resize-handle.start{left:0}.task-resize-handle.end{right:0}
+.drag-ghost{position:fixed!important;z-index:40!important;pointer-events:none;opacity:.88;box-shadow:0 8px 24px var(--shadow);border:2px solid var(--cursor)!important}
+.drag-caption{position:fixed;z-index:41;pointer-events:none;background:var(--panel);color:var(--text);border:1px solid var(--cursor);border-radius:6px;padding:4px 7px;font-size:12px;white-space:nowrap;box-shadow:0 4px 12px var(--shadow)}
+.phase-ghost{background:var(--panel);color:var(--text);border-radius:7px;padding:9px;white-space:nowrap}
+.lane-drop{position:absolute;left:2px;right:2px;height:31px;border:2px dashed var(--cursor);border-radius:6px;pointer-events:none;z-index:5;background:color-mix(in srgb,var(--cursor) 17%,transparent)}
+.lane-drop.new{height:10px;background:var(--cursor)}
+.phase-drop{outline:2px dashed var(--cursor);outline-offset:-3px}
+@media(max-width:700px){.range-controls{border-left:0;padding-left:0}.range-controls input[type=date]{width:123px}}
+</style>
 </head>
 <body>
-
-    <div class="page-container">
-
-        <div class="main-panel">
-            
-            <div class="main-controls-grid">
-                <div id="project-controls">
-                    <input type="text" id="project-name" value="Untitled Project">
-                    <button id="btn-new-project" class="btn btn-secondary">New Project</button>
-                    <button id="btn-save-json" class="btn btn-primary">Save JSON</button>
-                    <button id="btn-load-json" class="btn btn-secondary">Load JSON</button>
-                    <button id="btn-show-json" class="btn btn-secondary">Show JSON</button>
-                    <button id="btn-export-report" class="btn btn-secondary">Export Report</button> <!-- Added this button -->
-                    <input type="file" id="load-json-input" class="hidden" accept=".json">
-                </div>
-                
-                <div id="standard-date-range-wrapper">
-                    <div id="contextual-controls">
-                        <button id="btn-edit-phase" class="btn btn-primary hidden">Edit Phase</button>
-                        <button id="btn-edit-task" class="btn btn-primary hidden">Edit Task</button>
-                    </div>
-                    
-                    <div id="date-range-controls">
-                        <label for="project-start-date">Start:</label>
-                        <input type="date" id="project-start-date">
-                        <label for="project-end-date">End:</label>
-                        <input type="date" id="project-end-date">
-                        <button id="project-date-set" class="btn btn-secondary">Set</button>
-                    </div>
-
-                    <div id="standard-controls">
-                        <button id="btn-add-phase" class="btn btn-secondary">Add Phase</button>
-                        <button id="btn-add-task" class="btn btn-primary">Add Task</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="timeline-visualizer">
-                <div id="timeline-ruler-wrapper">
-                    <div id="timeline-ruler-corner"></div>
-                    <div id="timeline-ruler"></div>
-                </div>
-                <div id="timeline-tracks-container">
-                    <!-- Phase Lanes will be rendered here by JavaScript -->
-                </div>
-            </div>
-
-        </div>
-        
-        <div id="task-details-panel" class="hidden">
-            <div id="task-panel-header">
-                <div id="task-header-left">
-                    <h3 id="task-panel-title">Task Details</h3>
-                    <div id="task-info-bar">Select a task to see details</div>
-                </div>
-                <div id="task-header-right">
-                    <button id="btn-add-subtask" class="btn btn-subtask-add">Add Sub-task</button>
-                    <button class="modal-close-btn" id="btn-close-task-panel" style="position: static; transform: none;">&times;</button>
-                </div>
-            </div>
-            
-            <div id="sub-task-container">
-                <!-- Task Description and Sub-task List will be rendered here -->
-            </div>
-        </div>
-
-    </div>
-
-    <div id="modal-backdrop" class="modal-backdrop hidden">
-        <div id="modal-content" class="modal-content">
-            <!-- Modal content will be injected here -->
-        </div>
-    </div>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-
-            // --- Config ---
-            let pixelsPerDay = 40;
-            const TRACK_HEADER_WIDTH = 170;
-            let projectStartDate = new Date("2025-11-01");
-            let projectEndDate = new Date("2025-12-31");
-            let projectName = "New Website Launch";
-
-            // --- **NEW** DATA MODEL ---
-            let timelineData = [
-                {
-                    id: 1,
-                    phaseName: "Design",
-                    color: "#8c9e83", // Changed
-                    tasks: [
-                        { 
-                            id: 101, name: "Wireframes", 
-                            description: "Initial wireframes for key pages.",
-                            status: "completed",
-                            link: "https://www.figma.com/wireframes", // Added link
-                            assignee: "Jane Doe", // Added Assignee
-                            startTime: "2025-11-04", endTime: "2025-11-08", 
-                            subTasks: [
-                                { id: 1001, text: "Home Page", status: "completed", description: "" },
-                                { id: 1002, text: "Product Page", status: "completed", description: "" }
-                            ]
-                        },
-                        { 
-                            id: 102, name: "Mockups", 
-                            description: "High-fidelity mockups based on wireframes.",
-                            status: "ongoing",
-                            link: "https://www.figma.com/mockups", // Added link
-                            assignee: "Jane Doe", // Added Assignee
-                            startTime: "2025-11-10", endTime: "2025-11-15", 
-                            subTasks: [
-                                { id: 1003, text: "Home Page Mockup", status: "ongoing", description: "Desktop and mobile" },
-                                { id: 1004, text: "Product Page Mockup", status: "ongoing", description: "" },
-                                { id: 1005, text: "Style Guide", status: "completed", description: "Colors, fonts, spacing." }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    id: 2,
-                    phaseName: "Development",
-                    color: "#a1c6e1", // Changed
-                    tasks: [
-                        { 
-                            id: 201, name: "Frontend Setup", 
-                            description: "Initialize project, add component library.",
-                            status: "halted",
-                            link: "",
-                            assignee: "John Smith", // Added Assignee
-                            startTime: "2025-11-11", endTime: "2025-11-18", 
-                            subTasks: [
-                                { id: 2001, text: "Init React App", status: "completed", description: "" },
-                                { id: 2002, text: "Component Library", status: "halted", description: "Waiting on final style guide." }
-                            ]
-                        },
-                        { 
-                            id: 202, name: "API Integration", 
-                            description: "Connect frontend to backend services.",
-                            status: "ongoing",
-                            link: "",
-                            assignee: "John Smith", // Added Assignee
-                            startTime: "2025-11-19", endTime: "2025-11-26", 
-                            subTasks: [
-                                { id: 2003, text: "User Auth Endpoint", status: "ongoing", description: "" },
-                                { id: 2004, text: "Product Endpoint", status: "ongoing", description: "" }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    id: 3,
-                    phaseName: "Testing",
-                    color: "#f0bda1", // Changed
-                    tasks: [
-                        { 
-                            id: 301, name: "QA Pass 1", 
-                            description: "Initial quality assurance pass.",
-                            status: "ongoing",
-                            link: "",
-                            assignee: "QA Team", // Added Assignee
-                            startTime: "2025-11-27", endTime: "2025-12-05", 
-                            subTasks: []
-                        },
-                        { 
-                            id: 302, name: "User Auth Test", 
-                            description: "Testing login/logout, blocked by server issue.",
-                            status: "failed",
-                            link: "https://jira.example.com/BUG-123",
-                            assignee: "QA Team", // Added Assignee
-                            startTime: "2025-11-28", endTime: "2025-12-02", 
-                            subTasks: []
-                        }
-                    ]
-                }
-            ];
-            
-            // --- Selection State ---
-            let selectedPhaseId = null;
-            let selectedTaskInfo = { phaseId: null, taskId: null };
-
-            // --- DOM References ---
-            const modalBackdrop = document.getElementById('modal-backdrop');
-            const modalContent = document.getElementById('modal-content');
-            const timelineVisualizer = document.getElementById('timeline-visualizer');
-            const ruler = document.getElementById('timeline-ruler');
-            const rulerWrapper = document.getElementById('timeline-ruler-wrapper');
-            const tracksContainer = document.getElementById('timeline-tracks-container');
-            const addPhaseBtn = document.getElementById('btn-add-phase');
-            const addTaskBtn = document.getElementById('btn-add-task');
-            
-            const editTaskBtn = document.getElementById('btn-edit-task');
-            const editPhaseBtn = document.getElementById('btn-edit-phase');
-            
-            const taskDetailsPanel = document.getElementById('task-details-panel');
-            const taskPanelTitle = document.getElementById('task-panel-title');
-            const taskInfoBar = document.getElementById('task-info-bar');
-            const subTaskContainer = document.getElementById('sub-task-container');
-            const taskCloseBtn = document.getElementById('btn-close-task-panel');
-            const addSubtaskBtn = document.getElementById('btn-add-subtask');
-            
-            const startDateInput = document.getElementById('project-start-date');
-            const endDateInput = document.getElementById('project-end-date');
-            const dateSetBtn = document.getElementById('project-date-set');
-            
-            const projectNameInput = document.getElementById('project-name');
-            const saveJsonBtn = document.getElementById('btn-save-json');
-            const loadJsonBtn = document.getElementById('btn-load-json');
-            const loadJsonInput = document.getElementById('load-json-input');
-            const showJsonBtn = document.getElementById('btn-show-json');
-            const newProjectBtn = document.getElementById('btn-new-project');
-            const btnExportReport = document.getElementById('btn-export-report'); // Added this
-            
-            // --- Date & Helper Functions ---
-
-            function parseDate(dateString) {
-                const parts = dateString.split('-');
-                return new Date(parts[0], parts[1] - 1, parts[2]);
-            }
-            
-            function formatDate(date) {
-                return date.toISOString().split('T')[0];
-            }
-            
-            // Gets today's YYYY-MM-DD string in GMT+8
-            function getTodayGmt8() {
-                const now = new Date();
-                // Get the date string for "Asia/Singapore" (GMT+8)
-                const options = {
-                    timeZone: 'Asia/Singapore', // WITA is GMT+8, same as Singapore
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                };
-                const formatter = new Intl.DateTimeFormat('en-CA', options); // en-CA gives YYYY-MM-DD
-                return formatter.format(now);
-            }
-            
-            const DAY_MS = 1000 * 60 * 60 * 24;
-            
-            function getTotalDays() {
-                const start = new Date(projectStartDate.getTime());
-                const end = new Date(projectEndDate.getTime());
-                start.setHours(0,0,0,0);
-                end.setHours(0,0,0,0);
-                const diff = end.getTime() - start.getTime();
-                return Math.round(diff / DAY_MS) + 1; // Inclusive
-            }
-            
-            function dateToPixel(date) {
-                if (typeof date === 'string') date = parseDate(date);
-                const start = new Date(projectStartDate.getTime());
-                start.setHours(0,0,0,0);
-                date.setHours(0,0,0,0);
-                
-                const diff = date.getTime() - start.getTime();
-                const days = diff / DAY_MS;
-                return days * pixelsPerDay;
-            }
-
-            function findTask(phaseId, taskId) {
-                if (phaseId === null || taskId === null) return null;
-                const phase = timelineData.find(t => t.id === phaseId);
-                if (!phase) return null;
-                return phase.tasks.find(n => n.id === taskId);
-            }
-            
-            // --- Color Helper ---
-            const phaseColorPalette = {
-                '#757575': 'Default Grey',
-                '#8c9e83': 'Sage',
-                '#66b2b2': 'Mint',
-                '#b0a4d2': 'Lavender',
-                '#f0bda1': 'Peach',
-                '#d1c0a1': 'Sand',
-                '#d1a1ab': 'Rose',
-                '#a1c6e1': 'Sky',
-                '#a9a9a9': 'Stone'
-            };
-
-            function createColorOptions(selectedColor) {
-                let html = '';
-                for (const hex in phaseColorPalette) {
-                    const name = phaseColorPalette[hex];
-                    const selected = hex === selectedColor ? 'selected' : '';
-                    html += `<option value="${hex}" ${selected} style="background-color: ${hex}; color: ${isColorLight(hex) ? '#111' : '#eee'};">${name}</option>`;
-                }
-                return html;
-            }
-
-            // --- Modal API ---
-
-            function showModal(htmlContent) {
-                modalContent.innerHTML = htmlContent;
-                modalBackdrop.classList.remove('hidden');
-                
-                const closeBtn = modalContent.querySelector('.modal-close-btn');
-                if(closeBtn) {
-                    closeBtn.onclick = closeModal;
-                }
-                
-                const cancelBtns = modalContent.querySelectorAll('.btn-cancel');
-                cancelBtns.forEach(btn => {
-                    btn.onclick = closeModal;
-                });
-            }
-            
-            function closeModal() {
-                modalBackdrop.classList.add('hidden');
-                modalContent.innerHTML = '';
-            }
-
-            // --- Core Render Functions ---
-
-            function renderAll() {
-                const totalDays = getTotalDays();
-                const timelineWidth = totalDays * pixelsPerDay;
-                
-                document.title = projectName;
-                projectNameInput.value = projectName;
-                
-                startDateInput.value = formatDate(projectStartDate);
-                endDateInput.value = formatDate(projectEndDate);
-                
-                renderMainRuler(totalDays, timelineWidth);
-                renderPhaseLanes(timelineWidth);
-                
-                const selectedTask = findTask(selectedTaskInfo.phaseId, selectedTaskInfo.taskId);
-                if (selectedTask && !taskDetailsPanel.classList.contains('hidden')) {
-                    renderTaskDetails(selectedTask);
-                } else {
-                    hideTaskDetails();
-                }
-            }
-            
-            function renderMainRuler(totalDays, timelineWidth) {
-                rulerWrapper.style.width = `${timelineWidth + TRACK_HEADER_WIDTH}px`;
-                ruler.innerHTML = '';
-                ruler.style.width = `${timelineWidth}px`;
-
-                let currentDate = new Date(projectStartDate.getTime());
-                const todayDateStr = getTodayGmt8();
-                
-                for (let i = 0; i < totalDays; i++) {
-                    const day = currentDate.getDate();
-                    const dayOfWeek = currentDate.getDay(); // 0=Sun, 1=Mon
-                    const currentDateStr = formatDate(currentDate);
-                    
-                    let markerType = 'day-marker';
-                    let label = '';
-
-                    if (day === 1) {
-                        markerType = 'month-marker';
-                        label = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                    } else if (dayOfWeek === 1) { // Monday
-                        markerType = 'week-marker';
-                        label = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                    } else if (pixelsPerDay > 30) {
-                        label = day;
-                    }
-                    
-                    const marker = document.createElement('span');
-                    marker.className = `time-marker ${markerType}`;
-                    marker.style.left = `${i * pixelsPerDay}px`;
-                    
-                    if (currentDateStr === todayDateStr) {
-                        marker.classList.add('today-label');
-                    }
-                    
-                    if(label) {
-                         marker.innerText = label;
-                    }
-                    
-                    if (markerType === 'day-marker' && pixelsPerDay < 15) {
-                        // skip minor markers if too dense
-                    } else {
-                        ruler.appendChild(marker);
-                    }
-                    
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
-                
-                // Add Today Marker Line
-                const todayDate = parseDate(todayDateStr);
-                if (todayDate >= projectStartDate && todayDate <= projectEndDate) {
-                    const pixelPos = dateToPixel(todayDate);
-                    const todayMarker = document.createElement('div');
-                    todayMarker.id = 'today-marker-line';
-                    todayMarker.style.left = `${pixelPos}px`;
-                    ruler.appendChild(todayMarker);
-                }
-            }
-            
-            function renderPhaseLanes(timelineWidth) {
-                tracksContainer.style.width = `${timelineWidth + TRACK_HEADER_WIDTH}px`;
-                tracksContainer.innerHTML = '';
-                
-                timelineData.forEach(phase => {
-                    const trackElement = document.createElement('div');
-                    trackElement.className = 'timeline-track';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'track-header';
-                    header.style.backgroundColor = phase.color || 'var(--bg-color-medium)';
-                    
-                    // Simple contrast check
-                    const headerBg = header.style.backgroundColor;
-                    if(isColorLight(headerBg)) {
-                        header.style.color = "#111";
-                    } else {
-                        header.style.color = "#eee";
-                    }
-                    
-                    const headerText = document.createElement('span');
-                    headerText.innerText = phase.phaseName;
-                    
-                    if (phase.id === selectedPhaseId) {
-                        header.classList.add('selected');
-                        // Override selection color for light BGs
-                        if(isColorLight(headerBg)) {
-                             header.style.color = "#111";
-                        }
-                    }
-                    
-                    header.addEventListener('click', (e) => {
-                        handlePhaseSelect(phase.id);
-                    });
-                    
-                    header.appendChild(headerText);
-                    trackElement.appendChild(header);
-                    
-                    const body = document.createElement('div');
-                    body.className = 'track-body';
-                    body.style.width = `${timelineWidth}px`;
-                    body.style.minWidth = `${timelineWidth}px`;
-                    
-                    body.addEventListener('click', (e) => {
-                        if (e.target === body) {
-                            handleDeselect();
-                        }
-                    });
-
-                    let endTimes = [];
-                    let maxRow = 0;
-                    const sortedTasks = [...phase.tasks].sort((a, b) => parseDate(a.startTime) - parseDate(b.startTime));
-
-                    sortedTasks.forEach(task => {
-                        const taskStart = parseDate(task.startTime);
-                        const taskEnd = parseDate(task.endTime);
-
-                        let row = endTimes.findIndex(endTime => taskStart >= endTime);
-                        if(row === -1) {
-                            endTimes.push(taskEnd);
-                            row = endTimes.length - 1;
-                        } else {
-                            endTimes[row] = taskEnd;
-                        }
-                        maxRow = Math.max(maxRow, row);
-
-                        const clip = createTaskClipElement(task, phase.id, row);
-                        body.appendChild(clip);
-                    });
-                    
-                    let trackHeight = (maxRow + 1) * 35 + 15;
-                    body.style.height = `${trackHeight}px`;
-
-                    trackElement.appendChild(body);
-                    tracksContainer.appendChild(trackElement);
-                });
-            }
-            
-            function isColorLight(color) {
-                // Basic check for brightness, assumes hex or rgb
-                let r, g, b;
-                if (color.match(/^rgb/)) {
-                    [r, g, b] = color.match(/\d+/g);
-                } else if (color.startsWith("#")) {
-                    r = parseInt(color.substr(1, 2), 16);
-                    g = parseInt(color.substr(3, 2), 16);
-                    b = parseInt(color.substr(5, 2), 16);
-                } else {
-                    return false; // Default to dark text
-                }
-                return (r * 0.299 + g * 0.587 + b * 0.114) > 186;
-            }
-            
-            function createTaskClipElement(task, phaseId, row) {
-                const clip = document.createElement('div');
-                clip.className = 'timeline-node-clip';
-                clip.classList.add(`task-status-${task.status || 'ongoing'}`);
-
-                clip.dataset.phaseId = phaseId;
-                clip.dataset.taskId = task.id;
-                
-                const startPixel = dateToPixel(task.startTime);
-                const endPixel = dateToPixel(task.endTime);
-                
-                const width = (endPixel - startPixel) + pixelsPerDay; 
-                
-                clip.style.left = `${startPixel}px`;
-                clip.style.width = `${width}px`;
-                clip.style.top = `${8 + row * 35}px`;
-
-                if (task.id === selectedTaskInfo.taskId && phaseId === selectedTaskInfo.phaseId) {
-                    clip.classList.add('selected');
-                }
-                
-                clip.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleTaskClick(phaseId, task.id);
-                });
-                
-                const nameLabel = document.createElement('span');
-                nameLabel.innerText = task.name;
-                clip.appendChild(nameLabel);
-                
-                // Add link icon if link exists
-                if (task.link) {
-                    const linkIcon = document.createElement('a');
-                    linkIcon.href = task.link;
-                    linkIcon.target = "_blank";
-                    linkIcon.rel = "noopener noreferrer";
-                    linkIcon.className = "task-link-icon";
-                    linkIcon.innerHTML = "&#128279;"; // Link emoji
-                    linkIcon.title = task.link;
-                    linkIcon.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Don't select task when clicking link
-                    });
-                    clip.appendChild(linkIcon);
-                }
-                
-                return clip;
-            }
-            
-            // --- Task Details Panel Functions ---
-            
-            function showTaskDetails(task) {
-                taskDetailsPanel.classList.remove('hidden');
-                taskPanelTitle.innerText = `Task: ${task.name}`;
-                renderTaskDetails(task);
-                
-                const scrollPos = dateToPixel(task.startTime) - 50;
-                timelineVisualizer.scrollLeft = Math.max(0, scrollPos);
-            }
-            
-            function hideTaskDetails() {
-                taskDetailsPanel.classList.add('hidden');
-                taskInfoBar.innerText = 'Select a task to see details';
-            }
-            
-            function renderTaskDetails(task) {
-                subTaskContainer.innerHTML = ''; 
-                
-                // 1. Create Left Column (Description)
-                const leftColumn = document.createElement('div');
-                leftColumn.className = 'task-details-column';
-                
-                const descriptionEl = document.createElement('div');
-                descriptionEl.id = 'task-description-display';
-                const descriptionHtml = task.description 
-                    ? task.description.replace(/\n/g, '<br>') 
-                    : '<i>No description provided.</i>';
-                descriptionEl.innerHTML = `<h4>Task Description:</h4><p>${descriptionHtml}</p>`;
-                leftColumn.appendChild(descriptionEl);
-                
-                subTaskContainer.appendChild(leftColumn);
-
-                // 2. Create Right Column (Sub-tasks)
-                const rightColumn = document.createElement('div');
-                rightColumn.className = 'task-details-column';
-
-                const subTaskListEl = document.createElement('div');
-                subTaskListEl.id = 'sub-task-list';
-                
-                // 3. Render Sub-tasks
-                if (!task.subTasks || task.subTasks.length === 0) {
-                    taskInfoBar.innerText = 'No sub-tasks. Add one!';
-                } else {
-                    const completed = task.subTasks.filter(st => st.status === 'completed').length;
-                    taskInfoBar.innerText = `Sub-tasks: ${completed} / ${task.subTasks.length} completed`;
-                }
-
-                task.subTasks.forEach(subTask => {
-                    const item = document.createElement('div');
-                    item.className = 'sub-task-item';
-                    item.classList.add(`status-${subTask.status || 'ongoing'}`);
-                    
-                    const statusDot = document.createElement('span');
-                    statusDot.className = `subtask-status-dot task-status-${subTask.status || 'ongoing'}`;
-                    item.appendChild(statusDot);
-                    
-                    const infoWrapper = document.createElement('div');
-                    infoWrapper.className = 'sub-task-info';
-
-                    const label = document.createElement('label');
-                    label.htmlFor = `subtask-${subTask.id}`;
-                    label.innerText = subTask.text;
-                    infoWrapper.appendChild(label);
-                    
-                    const description = document.createElement('div');
-                    description.className = 'sub-task-description-display';
-                    description.innerText = subTask.description || '';
-                    infoWrapper.appendChild(description);
-                    
-                    item.appendChild(infoWrapper);
-                    
-                    const controlsWrapper = document.createElement('div');
-                    controlsWrapper.className = 'sub-task-controls';
-                    
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'btn-edit-subtask';
-                    editBtn.innerHTML = '&#9998;'; // Pencil
-                    editBtn.title = "Edit sub-task";
-                    editBtn.addEventListener('click', () => {
-                        showEditSubtaskModal(task, subTask);
-                    });
-                    controlsWrapper.appendChild(editBtn);
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn-delete-subtask';
-                    deleteBtn.innerHTML = '&times;';
-                    deleteBtn.title = "Delete sub-task";
-                    deleteBtn.dataset.subtaskId = subTask.id;
-                    
-                    deleteBtn.addEventListener('click', () => {
-                        showDeleteSubtaskModal(task, subTask);
-                    });
-                    controlsWrapper.appendChild(deleteBtn);
-                    
-                    item.appendChild(controlsWrapper);
-                    subTaskListEl.appendChild(item);
-                });
-                
-                rightColumn.appendChild(subTaskListEl);
-                subTaskContainer.appendChild(rightColumn);
-            }
-
-            // --- Modal Content Generators & Handlers ---
-
-            function showAddPhaseModal() {
-                const colorOptions = createColorOptions('#757575'); // Default to grey
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Add New Phase Lane</h3>
-                    <form id="modal-add-phase-form" class="form-section">
-                        <label for="modal-phase-name">Phase Name</label>
-                        <input type="text" id="modal-phase-name" required>
-                        <label for="modal-phase-color">Phase Color</label>
-                        <select id="modal-phase-color">
-                            ${colorOptions}
-                        </select>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Phase</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                document.getElementById('modal-add-phase-form').onsubmit = handleAddPhaseSubmit;
-            }
-            
-            function handleAddPhaseSubmit(e) {
-                e.preventDefault();
-                const phaseName = document.getElementById('modal-phase-name').value;
-                const phaseColor = document.getElementById('modal-phase-color').value;
-                if (!phaseName) return;
-                const newPhase = { 
-                    id: Date.now(), 
-                    phaseName: phaseName, 
-                    color: phaseColor, 
-                    tasks: [] 
-                };
-                timelineData.push(newPhase);
-                renderAll();
-                closeModal();
-            }
-            
-            function showAddTaskModal() {
-                if (timelineData.length === 0) {
-                    showModal(`
-                        <button class="modal-close-btn">&times;</button>
-                        <h3>Error</h3>
-                        <p>Please add a phase lane first before adding a task.</p>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
-                        </div>
-                    `);
-                    return;
-                }
-                const phaseOptions = timelineData.map(phase => 
-                    `<option value="${phase.id}">${phase.phaseName}</option>`
-                ).join('');
-                
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Add New Task</h3>
-                    <form id="modal-add-task-form" class="form-section">
-                        <label for="modal-task-phase">Add to Phase</label>
-                        <select id="modal-task-phase" required>${phaseOptions}</select>
-                        <label for="modal-task-name">Task Name</label>
-                        <input type="text" id="modal-task-name" required>
-                        <label for="modal-task-description">Description</label>
-                        <textarea id="modal-task-description"></textarea>
-                        <label for="modal-task-assignee">Assign to (Optional)</label>
-                        <input type="text" id="modal-task-assignee" placeholder="e.g., John Doe">
-                        <label for="modal-task-link">Link (Optional)</label>
-                        <input type="text" id="modal-task-link" placeholder="https://...">
-                        <label for="modal-task-start">Start Date</label>
-                        <input type="date" id="modal-task-start" value="${formatDate(new Date())}" required>
-                        <label for="modal-task-end">End Date</label>
-                        <input type="date" id="modal-task-end" value="${formatDate(new Date())}" required>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Task</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                document.getElementById('modal-add-task-form').onsubmit = handleAddTaskSubmit;
-            }
-            
-            function handleAddTaskSubmit(e) {
-                e.preventDefault();
-                const phaseId = parseInt(document.getElementById('modal-task-phase').value);
-                const phase = timelineData.find(t => t.id === phaseId);
-                if (!phase) return;
-                
-                const startTime = document.getElementById('modal-task-start').value;
-                const endTime = document.getElementById('modal-task-end').value;
-
-                if (parseDate(endTime) < parseDate(startTime)) {
-                    showModal(`
-                        <button class="modal-close-btn">&times;</button>
-                        <h3>Error</h3>
-                        <p>End date must be on or after start date.</p>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
-                        </div>
-                    `);
-                    return;
-                }
-                
-                const newTask = {
-                    id: Date.now(),
-                    name: document.getElementById('modal-task-name').value,
-                    description: document.getElementById('modal-task-description').value,
-                    assignee: document.getElementById('modal-task-assignee').value,
-                    link: document.getElementById('modal-task-link').value,
-                    status: "ongoing", // Default status
-                    startTime: startTime, 
-                    endTime: endTime,
-                    subTasks: []
-                };
-                
-                phase.tasks.push(newTask);
-                renderAll();
-                closeModal();
-            }
-
-            function handleTaskClick(phaseId, taskId) {
-                selectedPhaseId = null;
-                selectedTaskInfo = { phaseId, taskId };
-                const task = findTask(phaseId, taskId);
-                if (task) {
-                    showTaskDetails(task);
-                }
-                updateControlBarVisibility();
-                renderAll();
-            }
-            
-            function handleDeselect() {
-                selectedPhaseId = null;
-                selectedTaskInfo = { phaseId: null, taskId: null };
-                hideTaskDetails();
-                updateControlBarVisibility();
-                renderAll();
-            }
-            
-            function handlePhaseSelect(phaseId) {
-                handleDeselect();
-                selectedPhaseId = phaseId;
-                updateControlBarVisibility();
-                renderAll();
-            }
-            
-            function handleEditTaskClick() {
-                const { phaseId, taskId } = selectedTaskInfo;
-                const task = findTask(phaseId, taskId);
-                if (task) {
-                    showEditTaskModal(phaseId, taskId, task);
-                }
-            }
-            
-            function handleEditPhaseClick() {
-                if (!selectedPhaseId) return;
-                const phase = timelineData.find(t => t.id === selectedPhaseId);
-                if (phase) {
-                    showEditPhaseModal(phase);
-                }
-            }
-            
-            function showEditPhaseModal(phase) {
-                const colorOptions = createColorOptions(phase.color || '#757575');
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Edit Phase</h3>
-                    <form id="modal-edit-phase-form" class="form-section">
-                        <label for="modal-edit-phase-name">Phase Name</label>
-                        <input type="text" id="modal-edit-phase-name" value="${phase.phaseName}" required>
-                        <label for="modal-edit-phase-color">Phase Color</label>
-                        <select id="modal-edit-phase-color">
-                            ${colorOptions}
-                        </select>
-                        <div class="modal-actions">
-                            <button type="button" id="modal-btn-delete-phase" class="btn btn-danger" style="margin-right: auto;">Delete Phase</button>
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                
-                document.getElementById('modal-edit-phase-form').onsubmit = (e) => {
-                    e.preventDefault();
-                    const newName = document.getElementById('modal-edit-phase-name').value;
-                    const newColor = document.getElementById('modal-edit-phase-color').value;
-                    if (newName) {
-                        phase.phaseName = newName;
-                        phase.color = newColor;
-                        renderAll();
-                        closeModal();
-                    }
-                };
-                document.getElementById('modal-btn-delete-phase').onclick = () => {
-                    showDeletePhaseModal(phase.id);
-                };
-            }
-            
-            function showDeletePhaseModal(phaseId) {
-                const phase = timelineData.find(t => t.id === phaseId);
-                if (!phase) return;
-                
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Delete Phase</h3>
-                    <p>Are you sure you want to delete "<strong>${phase.phaseName}</strong>"?</p>
-                    <p>This will also delete all ${phase.tasks.length} tasks. This cannot be undone.</p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                        <button type="button" id="modal-btn-confirm-delete" class="btn btn-danger">Yes, Delete</button>
-                    </div>
-                `;
-                showModal(html);
-                document.getElementById('modal-btn-confirm-delete').onclick = () => {
-                    handleDeletePhase(phaseId);
-                    closeModal(); // Close confirmation modal
-                };
-            }
-            
-            function handleDeletePhase(phaseId) {
-                timelineData = timelineData.filter(t => t.id !== phaseId);
-                if (selectedPhaseId === phaseId) {
-                    handleDeselect();
-                }
-                renderAll();
-            }
-            
-            function showEditTaskModal(phaseId, taskId, task) {
-                const phaseOptions = timelineData.map(phase => 
-                    `<option value="${phase.id}" ${phase.id === phaseId ? 'selected' : ''}>${phase.phaseName}</option>`
-                ).join('');
-                
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Edit Task: ${task.name}</h3>
-                    <form id="modal-edit-task-form" class="form-section">
-                        <label for="modal-edit-phase">Phase</label>
-                        <select id="modal-edit-phase">${phaseOptions}</select>
-                    
-                        <label for="modal-edit-name">Name</label>
-                        <input type="text" id="modal-edit-name" value="${task.name}" required>
-                        
-                        <label for="modal-edit-description">Description</label>
-                        <textarea id="modal-edit-description">${task.description || ''}</textarea>
-                        
-                        <label for="modal-edit-assignee">Assign to (Optional)</label>
-                        <input type="text" id="modal-edit-assignee" value="${task.assignee || ''}" placeholder="e.g., John Doe">
-                        
-                        <label for="modal-edit-link">Link (Optional)</label>
-                        <input type="text" id="modal-edit-link" value="${task.link || ''}" placeholder="https://...">
-                        
-                        <label for="modal-edit-status">Task Status</label>
-                        <select id="modal-edit-status">
-                            <option value="ongoing">Ongoing</option>
-                            <option value="halted">Halted / Issues</option>
-                            <option value="failed">Failed</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                        
-                        <label for="modal-edit-start">Start Date</label>
-                        <input type="date" id="modal-edit-start" value="${task.startTime}" required>
-                        <label for="modal-edit-end">End Date</label>
-                        <input type="date" id="modal-edit-end" value="${task.endTime}" required>
-                        <div class="modal-actions">
-                            <button type="button" id="modal-btn-delete" class="btn btn-danger" style="margin-right: auto;">Delete Task</button>
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                
-                document.getElementById('modal-edit-status').value = task.status || 'ongoing';
-                
-                document.getElementById('modal-edit-task-form').onsubmit = (e) => handleSaveTaskChanges(e, phaseId, taskId);
-                document.getElementById('modal-btn-delete').onclick = () => {
-                    const task = findTask(phaseId, taskId);
-                    showModal(`
-                        <button class="modal-close-btn">&times;</button>
-                        <h3>Delete Task</h3>
-                        <p>Are you sure you want to delete "<strong>${task.name}</strong>"?</p>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="button" id="modal-btn-confirm-delete-task" class="btn btn-danger">Yes, Delete</button>
-                        </div>
-                    `);
-                    document.getElementById('modal-btn-confirm-delete-task').onclick = () => handleDeleteTask(phaseId, taskId);
-                };
-            }
-            
-            function handleSaveTaskChanges(e, originalPhaseId, taskId) {
-                e.preventDefault();
-                
-                const newStartTime = document.getElementById('modal-edit-start').value;
-                const newEndTime = document.getElementById('modal-edit-end').value;
-                
-                if (parseDate(newEndTime) < parseDate(newStartTime)) {
-                    document.getElementById('modal-content').insertAdjacentHTML('beforeend', '<p style="color: var(--accent-red); margin-top: 10px;">Error: End date must be on or after start date.</p>');
-                    return;
-                }
-                
-                const newPhaseId = parseInt(document.getElementById('modal-edit-phase').value);
-                
-                // Find the task and update it
-                const oldPhase = timelineData.find(p => p.id === originalPhaseId);
-                const taskIndex = oldPhase.tasks.findIndex(t => t.id === taskId);
-                if (taskIndex === -1) return; // Task not found
-                
-                const task = oldPhase.tasks[taskIndex];
-                
-                task.name = document.getElementById('modal-edit-name').value;
-                task.description = document.getElementById('modal-edit-description').value;
-                task.assignee = document.getElementById('modal-edit-assignee').value;
-                task.link = document.getElementById('modal-edit-link').value;
-                task.status = document.getElementById('modal-edit-status').value;
-                task.startTime = newStartTime;
-                task.endTime = newEndTime;
-                
-                // Check if phase was changed
-                if (newPhaseId !== originalPhaseId) {
-                    // Remove task from old phase
-                    oldPhase.tasks.splice(taskIndex, 1);
-                    // Add task to new phase
-                    const newPhase = timelineData.find(p => p.id === newPhaseId);
-                    if (newPhase) {
-                        newPhase.tasks.push(task);
-                    }
-                    // Update selection to reflect new phase, otherwise task panel will be confused
-                    selectedTaskInfo.phaseId = newPhaseId;
-                }
-                
-                renderAll();
-                closeModal();
-            }
-            
-            function handleDeleteTask(phaseId, taskId) {
-                const phase = timelineData.find(t => t.id === phaseId);
-                if (phase) {
-                    phase.tasks = phase.tasks.filter(n => n.id !== taskId);
-                }
-                handleDeselect();
-                renderAll();
-                closeModal();
-            }
-
-            // --- Restored Project Modals ---
-            function showNewProjectModal() {
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Create New Project</h3>
-                    <p>Are you sure you want to create a new project?</p>
-                    <p>All unsaved data will be lost.</p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                        <button type="button" id="modal-btn-confirm-new" class="btn btn-danger">Yes, Create New</button>
-                    </div>
-                `;
-                showModal(html);
-                document.getElementById('modal-btn-confirm-new').onclick = () => {
-                    handleNewProject();
-                    closeModal();
-                };
-            }
-        
-            function handleNewProject() {
-                projectName = "Untitled Project";
-                projectStartDate = new Date();
-                projectEndDate = new Date();
-                projectEndDate.setDate(projectEndDate.getDate() + 30); // 30-day default
-                
-                timelineData = [
-                    { id: Date.now(), phaseName: "To Do", color: "#757575", tasks: [] },
-                    { id: Date.now() + 1, phaseName: "In Progress", color: "#a1c6e1", tasks: [] },
-                    { id: Date.now() + 2, phaseName: "Done", color: "#8c9e83", tasks: [] }
-                ];
-                
-                handleDeselect();
-                renderAll();
-            }
-
-            // --- Restored Sub-task Modals ---
-            function handleAddSubtaskClick() {
-                const task = findTask(selectedTaskInfo.phaseId, selectedTaskInfo.taskId);
-                if (task) {
-                    showAddSubtaskModal(task);
-                }
-            }
-            
-            function showAddSubtaskModal(task) {
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Add Sub-task to "${task.name}"</h3>
-                    <form id="modal-add-subtask-form" class="form-section">
-                        <label for="modal-subtask-name">Sub-task Name</label>
-                        <input type="text" id="modal-subtask-name" required>
-                        <label for="modal-subtask-description">Description (Optional)</label>
-                        <textarea id="modal-subtask-description" rows="3"></textarea>
-                        <label for="modal-subtask-status">Status</label>
-                        <select id="modal-subtask-status">
-                            <option value="ongoing">Ongoing</option>
-                            <option value="halted">Halted / Issues</option>
-                            <option value="failed">Failed</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Sub-task</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                document.getElementById('modal-add-subtask-form').onsubmit = (e) => {
-                    e.preventDefault();
-                    const text = document.getElementById('modal-subtask-name').value;
-                    const description = document.getElementById('modal-subtask-description').value;
-                    const status = document.getElementById('modal-subtask-status').value;
-                    if (text) {
-                        const newSubtask = { 
-                            id: Date.now(), 
-                            text: text, 
-                            status: status, 
-                            description: description 
-                        };
-                        task.subTasks.push(newSubtask);
-                        renderTaskDetails(task);
-                        closeModal();
-                    }
-                };
-            }
-            
-            function showEditSubtaskModal(task, subTask) {
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Edit Sub-task</h3>
-                    <form id="modal-edit-subtask-form" class="form-section">
-                        <label for="modal-subtask-name">Sub-task Name</label>
-                        <input type="text" id="modal-subtask-name" value="${subTask.text}" required>
-                        <label for="modal-subtask-description">Description (Optional)</label>
-                        <textarea id="modal-subtask-description" rows="3">${subTask.description || ''}</textarea>
-                        <label for="modal-subtask-status">Status</label>
-                        <select id="modal-subtask-status">
-                            <option value="ongoing">Ongoing</option>
-                            <option value="halted">Halted / Issues</option>
-                            <option value="failed">Failed</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                `;
-                showModal(html);
-                
-                document.getElementById('modal-subtask-status').value = subTask.status || 'ongoing';
-                
-                document.getElementById('modal-edit-subtask-form').onsubmit = (e) => {
-                    e.preventDefault();
-                    const newText = document.getElementById('modal-subtask-name').value;
-                    const newDescription = document.getElementById('modal-subtask-description').value;
-                    const newStatus = document.getElementById('modal-subtask-status').value;
-                    if (newText) {
-                        subTask.text = newText;
-                        subTask.description = newDescription;
-                        subTask.status = newStatus;
-                        renderTaskDetails(task);
-                        closeModal();
-                    }
-                };
-            }
-            
-            function showDeleteSubtaskModal(task, subTask) {
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Delete Sub-task</h3>
-                    <p>Are you sure you want to delete "<strong>${subTask.text}</strong>"?</p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
-                        <button type="button" id="modal-btn-confirm-delete-subtask" class="btn btn-danger">Yes, Delete</button>
-                    </div>
-                `;
-                showModal(html);
-                document.getElementById('modal-btn-confirm-delete-subtask').onclick = () => {
-                    task.subTasks = task.subTasks.filter(st => st.id !== subTask.id);
-                    renderTaskDetails(task);
-                    closeModal();
-                };
-            }
-
-            // --- Restored Control Bar Visibility Function ---
-            function updateControlBarVisibility() {
-                if (selectedTaskInfo.taskId !== null) {
-                    editTaskBtn.classList.remove('hidden');
-                } else {
-                    editTaskBtn.classList.add('hidden');
-                }
-                
-                if (selectedPhaseId !== null) {
-                    editPhaseBtn.classList.remove('hidden');
-                } else {
-                    editPhaseBtn.classList.add('hidden');
-                }
-            }
-
-            // --- New and Restored Functions ---
-            
-            function downloadFile(filename, content, mimeType) {
-                const blob = new Blob([content], {type: mimeType});
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-            
-            function handleShowJSON() {
-                const data = {
-                    projectName: projectName,
-                    projectStartDate: formatDate(projectStartDate),
-                    projectEndDate: formatDate(projectEndDate),
-                    timelineData: timelineData
-                };
-                const jsonString = JSON.stringify(data, null, 2);
-                const html = `
-                    <button class="modal-close-btn">&times;</button>
-                    <h3>Show JSON</h3>
-                    <p>Copy the data below to save your project.</p>
-                    <textarea id="json-export-textarea" readonly>${jsonString}</textarea>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-primary btn-cancel">Done</button>
-                    </div>
-                `;
-                showModal(html);
-                document.getElementById('json-export-textarea').select();
-            }
-            
-            function handleSaveJSON() {
-                const data = {
-                    projectName: projectName,
-                    projectStartDate: formatDate(projectStartDate),
-                    projectEndDate: formatDate(projectEndDate),
-                    timelineData: timelineData
-                };
-                const jsonString = JSON.stringify(data, null, 2);
-                downloadFile(`${projectName.replace(/[^a-z0-9]/gi, '_') || 'project'}.json`, jsonString, 'application/json');
-            }
-            
-            function handleExportReport() {
-                const todayStr = getTodayGmt8(); // YYYY-MM-DD
-                
-                // Reformat date for header
-                const [year, month, day] = todayStr.split('-');
-                const headerDate = `${day} - ${month} - ${year}`;
-                
-                let mdContent = `Task Status - ${headerDate}\n\n`; // Changed header
-
-                let tasksFound = false;
-                
-                const statusEmojis = {
-                    ongoing: '⏳',
-                    halted: '⚠️'
-                };
-
-                // 1. Group active tasks by assignee
-                const tasksByAssignee = {};
-                
-                timelineData.forEach(phase => {
-                    const activeTasks = phase.tasks.filter(task => 
-                        task.status === 'ongoing' || task.status === 'halted'
-                    );
-
-                    activeTasks.forEach(task => {
-                        const assigneeKey = task.assignee ? `[ ${task.assignee} ]` : '[ Unassigned ]';
-                        if (!tasksByAssignee[assigneeKey]) {
-                            tasksByAssignee[assigneeKey] = [];
-                        }
-                        // Add phaseName to task for later grouping
-                        tasksByAssignee[assigneeKey].push({ ...task, phaseName: phase.phaseName });
-                    });
-                });
-
-                // 2. Iterate through assignees and print their tasks
-                for (const assigneeKey in tasksByAssignee) {
-                    tasksFound = true;
-                    mdContent += `**${assigneeKey}**\n\n`; // Assignee name
-
-                    // Group tasks for this assignee by phase
-                    const tasksByPhase = {};
-                    tasksByAssignee[assigneeKey].forEach(task => {
-                        if (!tasksByPhase[task.phaseName]) {
-                            tasksByPhase[task.phaseName] = [];
-                        }
-                        tasksByPhase[task.phaseName].push(task);
-                    });
-
-                    // Print tasks grouped by phase
-                    for (const phaseName in tasksByPhase) {
-                        mdContent += `**${phaseName}**\n\n`; // Phase name as bold
-
-                        tasksByPhase[phaseName].forEach(task => {
-                            const taskEmoji = statusEmojis[task.status] || '';
-                            mdContent += `- ${taskEmoji} ${task.name}  \n`; // Added double space
-                            
-                            if (task.link) {
-                                mdContent += `  [ ${task.link} ]\n`;
-                            }
-                            if (task.description) {
-                                // Indent all lines of description
-                                const indentedDesc = task.description.split('\n').map(line => `  ${line}`).join('\n');
-                                mdContent += `${indentedDesc}\n`;
-                            }
-
-                            // Find sub-tasks that are also ongoing or halted
-                            const activeSubTasks = task.subTasks.filter(sub =>
-                                sub.status === 'ongoing' || sub.status === 'halted'
-                            );
-
-                            if (activeSubTasks.length > 0) {
-                                activeSubTasks.forEach(sub => {
-                                    const subTaskEmoji = statusEmojis[sub.status] || '';
-                                    mdContent += `  - ${subTaskEmoji} ${sub.text}  \n`; // Added double space
-                                    if (sub.description) {
-                                        // Indent all lines of sub-description
-                                        const indentedSubDesc = sub.description.split('\n').map(line => `    ${line}`).join('\n');
-                                        mdContent += `${indentedSubDesc}\n`; // 4 spaces
-                                    }
-                                });
-                            }
-                            mdContent += "\n"; // Add space after each task
-                        });
-                    }
-                }
-
-                if (!tasksFound) {
-                    mdContent += "*No ongoing or halted tasks found for today.*";
-                }
-
-                downloadFile(`Report-${projectName}-${todayStr}.md`, mdContent, 'text/markdown');
-            }
-
-            function handleLoadJSON(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        if (data && data.projectName && data.timelineData && data.projectStartDate && data.projectEndDate) {
-                            projectName = data.projectName;
-                            projectStartDate = parseDate(data.projectStartDate);
-                            projectEndDate = parseDate(data.projectEndDate);
-                            timelineData = data.timelineData;
-                            handleDeselect();
-                            renderAll();
-                        } else {
-                            showModal(`
-                                <button class="modal-close-btn">&times;</button>
-                                <h3>Load Error</h3>
-                                <p>Invalid project JSON file. Missing required data.</p>
-                                <div class="modal-actions">
-                                    <button type="button" class="btn btn-secondary btn-cancel">OK</button>
-                                </div>
-                            `);
-                        }
-                    } catch (err) {
-                        showModal(`
-                            <button class="modal-close-btn">&times;</button>
-                            <h3>Load Error</h3>
-                            <p>Error reading file: ${err.message}</p>
-                            <div class="modal-actions">
-                                <button type="button" class="btn btn-secondary btn-cancel">OK</button>
-                            </div>
-                        `);
-                    }
-                };
-                reader.readAsText(file);
-                event.target.value = null;
-            }
-
-            
-            function handleSetDates() {
-                const start = parseDate(startDateInput.value);
-                const end = parseDate(endDateInput.value);
-                
-                if (end < start) {
-                    showModal(`
-                        <button class="modal-close-btn">&times;</button>
-                        <h3>Error</h3>
-                        <p>End date must be on or after start date.</p>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary btn-cancel">OK</button>
-                        </div>
-                    `);
-                    startDateInput.value = formatDate(projectStartDate);
-                    endDateInput.value = formatDate(projectEndDate);
-                    return;
-                }
-                
-                projectStartDate = start;
-                projectEndDate = end;
-                renderAll();
-            }
-            
-            // --- Initial Setup ---
-            function init() {
-                addPhaseBtn.addEventListener('click', showAddPhaseModal);
-                addTaskBtn.addEventListener('click', showAddTaskModal);
-                showJsonBtn.addEventListener('click', handleShowJSON);
-                saveJsonBtn.addEventListener('click', handleSaveJSON);
-                loadJsonBtn.addEventListener('click', () => loadJsonInput.click());
-                loadJsonInput.addEventListener('change', handleLoadJSON);
-                newProjectBtn.addEventListener('click', showNewProjectModal); // Added this
-                btnExportReport.addEventListener('click', handleExportReport); 
-                
-                editTaskBtn.addEventListener('click', handleEditTaskClick);
-                editPhaseBtn.addEventListener('click', handleEditPhaseClick);
-                addSubtaskBtn.addEventListener('click', handleAddSubtaskClick); // Added this
-                taskCloseBtn.addEventListener('click', handleDeselect);
-                dateSetBtn.addEventListener('click', handleSetDates);
-                
-                projectNameInput.addEventListener('change', (e) => {
-                    projectName = e.target.value || "Untitled Project";
-                    document.title = projectName;
-                });
-                
-                modalBackdrop.addEventListener('click', (e) => {
-                    if (e.target === modalBackdrop) closeModal();
-                });
-                
-                tracksContainer.addEventListener('click', (e) => {
-                   if (e.target === tracksContainer) handleDeselect(); 
-                });
-                
-                renderAll();
-            }
-            
-            init();
-        });
-    </script>
-
-</body>
-</html>
+<div class="app">
+<header class="toolbar">
+<input id="workspace-name" aria-label="工作区名称" value="研究生工作记录" title="工作区名称"><span class="build-badge">修订版 09·26 v4</span>
+<button id="new-project" class="quiet">新建</button><button id="save" class="primary" title="Ctrl+S">保存 JSON</button><button id="import">导入 JSON</button><button id="export-md" class="quiet">导出 Markdown</button><input id="file-input" type="file" accept=".json,application/json" multiple class="hidden">
+<span class="grow"></span><input class="search-field" id="search" placeholder="搜索任务、每日记录…" aria-label="全局搜索" title="Ctrl+F"><button id="settings" title="主题与颜色">设置</button><span id="save-status" class="status">尚未保存</span>
+</header>
+<div class="workspace" id="workspace">
+<div class="left" id="left">
+<section class="timeline-panel" id="timeline-panel">
+<div class="timeline-actions"><button id="add-phase">＋ 阶段</button><button id="add-task" class="primary">＋ 任务</button><div class="range-controls"><label for="view-start">显示起点</label><input type="date" id="view-start"><label for="view-end">显示终点</label><input type="date" id="view-end"><button id="set-range">设定范围</button></div><span class="grow"></span><button id="prev-day" title="前一天">‹</button><button id="jump-today">今天</button><button id="next-day" title="后一天">›</button><label for="axis-date" class="small muted">查看日期</label><input type="date" id="axis-date" aria-label="查看日期"><div class="zoom-controls"><label for="zoom-slider" class="small muted">缩放</label><button id="zoom-out" title="缩小时间轴" aria-label="缩小时间轴">−</button><input type="range" id="zoom-slider" min="0" max="100" step="1" aria-label="时间轴缩放"><button id="zoom-in" title="放大时间轴" aria-label="放大时间轴">＋</button></div></div>
+<div class="timeline-scroll" id="timeline-scroll"><div class="ruler-row" id="ruler-row"><div class="ruler-corner">阶段 / 日期</div><div class="ruler" id="ruler"></div></div><div id="tracks"></div></div>
+</section><div id="split-v" class="split-v" role="separator" aria-label="调整任务详情高度" tabindex="0"></div>
+<section class="details" id="details"><div class="details-head"><h2>任务详情</h2><span id="detail-hint" class="small muted">选中时间轴上的任务</span><span class="grow"></span><button id="detail-toggle" class="quiet" title="收起或展开">收起</button></div><div id="detail-content"></div></section>
+</div><div id="split-h" class="split-h" role="separator" aria-label="调整每日日志宽度" tabindex="0"></div>
+<aside class="journal" id="journal"><div class="journal-head"><h2>每日记录</h2><span class="grow"></span><button id="journal-toggle" class="quiet" title="收起或展开">收起</button></div><div class="journal-date"><button id="journal-prev" title="前一天">‹</button><input type="date" id="journal-date" aria-label="记录日期"><button id="journal-today">今天</button><button id="journal-next" title="后一天">›</button></div><div class="small muted">当日相关任务</div><div class="related" id="related"></div><button id="copy-yesterday" class="quiet">载入昨日计划 → 今日完成</button><div id="log-fields"></div></aside>
+</div></div>
+<div id="search-results" class="result-panel hidden"></div><div id="modal-cover" class="modal-cover hidden"><div id="modal" class="modal"></div></div><div id="toast" class="toast hidden" role="status"></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);const clone=x=>structuredClone(x);const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const validDate=s=>{if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new Date(s+'T12:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===s};
+const addDays=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const dayDiff=(a,b)=>Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000);
+const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const stamp=()=>new Date().toISOString();const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const statuses={ongoing:'进行中',halted:'暂停·有问题',failed:'未完成',completed:'已完成'};
+const fresh=(language='zh')=>({version:3,projectName:language==='en'?'Work Record':'工作记录仪',phaseOrderUpdatedAt:'',timelineData:[{id:uid(),phaseName:language==='en'?'To Do':'待办',color:'#879cad',lanes:[],tasks:[],updatedAt:stamp()}],dailyLogs:{}});
+let data=fresh(),selection=null,viewDate=today(),viewStart=addDays(today(),-7),viewEnd=addDays(today(),30),scale=52,dirty=false,undoStack=[],redoStack=[],editingSnapshot=null,lastSaved=null,filter='全部';
+const uiKey='work-timeline-ui-v2';const themeNames=['背景','面板','主文字','次级文字','网格线','月份分隔线','今日线','日期游标','进行中','有问题','未完成','已完成'];const vars=['--bg','--panel','--text','--muted','--grid','--month','--today','--cursor','--ongoing','--halted','--failed','--completed'];
+const themes={暗色:['#171c27','#222a38','#edf2f8','#a6b3c4','#384456','#7392b3','#f48080','#7fd5e5','#69b9ee','#f0b66c','#d77993','#8cc9a3'],浅色:['#f2f4f8','#ffffff','#253347','#617184','#d9e1ea','#a5b7cd','#df6669','#389bb6','#5b9fd7','#d69545','#d17189','#60ad7d'],柔和:['#f7f3ed','#fffaf4','#493e43','#877a7b','#e3d5ce','#c0a7ad','#cd7571','#6b9d9c','#78a9bb','#d5a46f','#bf8297','#80a88d']};
+const buttonThemes={暗色:{save:'#7fd5e5',task:'#8cc9a3'},浅色:{save:'#389bb6',task:'#5b9fd7'},柔和:{save:'#6b9d9c',task:'#80a88d'}};
+let prefs={theme:'暗色',language:'zh',colors:themes['暗色'].slice(),saveColor:buttonThemes['暗色'].save,taskColor:buttonThemes['暗色'].task,journalWidth:30,detailsHeight:35,journalCollapsed:false,detailsCollapsed:false};let storedPrefs={};try{storedPrefs=JSON.parse(localStorage.getItem(uiKey)||'{}')||{};Object.assign(prefs,storedPrefs)}catch{}
+if(!['zh','en'].includes(prefs.language))prefs.language='zh';
+function tr(zh,en){return prefs.language==='en'?en:zh}
+function statusLabel(key){return prefs.language==='en'?({ongoing:'In progress',halted:'Paused · issue',failed:'Incomplete',completed:'Completed'}[key]||key):(statuses[key]||key)}
+function logLabel(key){return tr(({completed:'今日完成',issues:'遇到的问题',plans:'明日计划',notes:'备注'})[key],({completed:'Completed today',issues:'Issues encountered',plans:'Tomorrow’s plan',notes:'Notes'})[key])}
+function localizeStatic(){
+ document.documentElement.lang=prefs.language==='en'?'en':'zh-CN';
+ const labels=[
+  ['.build-badge','textContent','修订版 09·26 v4','Revision 09·26 v4'],
+  ['#new-project','textContent','新建','New'],['#save','textContent','保存 JSON','Save JSON'],['#import','textContent','导入 JSON','Import JSON'],['#export-md','textContent','导出 Markdown','Export Markdown'],
+  ['#settings','textContent','设置','Settings'],['#settings','title','主题与颜色','Theme, colors and language'],
+  ['#search','placeholder','搜索任务、每日记录…','Search tasks and daily entries…'],['#search','aria-label','全局搜索','Search all content'],
+  ['#add-phase','textContent','＋ 阶段','＋ Phase'],['#add-task','textContent','＋ 任务','＋ Task'],
+  ['label[for="view-start"]','textContent','显示起点','Start'],['label[for="view-end"]','textContent','显示终点','End'],['#set-range','textContent','设定范围','Set range'],
+  ['#prev-day','title','前一天','Previous day'],['#next-day','title','后一天','Next day'],['#jump-today','textContent','今天','Today'],
+  ['label[for="axis-date"]','textContent','查看日期','View date'],['#axis-date','aria-label','查看日期','View date'],
+  ['label[for="zoom-slider"]','textContent','缩放','Zoom'],['#zoom-slider','aria-label','时间轴缩放','Timeline zoom'],
+  ['#zoom-out','title','缩小时间轴','Zoom out'],['#zoom-out','aria-label','缩小时间轴','Zoom out'],['#zoom-in','title','放大时间轴','Zoom in'],['#zoom-in','aria-label','放大时间轴','Zoom in'],
+  ['.ruler-corner','textContent','阶段 / 日期','Phase / Date'],['#split-v','aria-label','调整任务详情高度','Resize task details'],['#split-h','aria-label','调整每日日志宽度','Resize daily journal'],
+  ['.details-head h2','textContent','任务详情','Task details'],['#detail-toggle','title','收起或展开','Collapse or expand'],
+  ['.journal-head h2','textContent','每日记录','Daily journal'],['#journal-toggle','title','收起或展开','Collapse or expand'],
+  ['#journal-prev','title','前一天','Previous day'],['#journal-next','title','后一天','Next day'],['#journal-today','textContent','今天','Today'],
+  ['#journal-date','aria-label','记录日期','Journal date'],['.journal-date + .small','textContent','当日相关任务','Tasks on this day'],
+  ['#copy-yesterday','textContent','载入昨日计划 → 今日完成','Copy yesterday’s plan → completed today']
+ ];
+ for(const [selector,prop,zh,en] of labels){const el=document.querySelector(selector);if(!el)continue;if(prop==='textContent'||prop==='placeholder'||prop==='title')el[prop]=tr(zh,en);else el.setAttribute(prop,tr(zh,en))}
+ $('workspace-name').setAttribute('aria-label',tr('工作区名称','Workspace name'));
+ $('workspace-name').title=tr('工作区名称','Workspace name');
+ $('zoom-slider').title=tr(`时间轴缩放 ${Math.round(scale)} 像素/天`,`Timeline zoom: ${Math.round(scale)} px/day`);
+ setDirty(dirty);
+}
+if(!Object.hasOwn(storedPrefs,'saveColor')||!/^#[0-9a-f]{6}$/i.test(prefs.saveColor||''))prefs.saveColor=(buttonThemes[prefs.theme]||buttonThemes['暗色']).save;
+if(!Object.hasOwn(storedPrefs,'taskColor')||!/^#[0-9a-f]{6}$/i.test(prefs.taskColor||''))prefs.taskColor=(buttonThemes[prefs.theme]||buttonThemes['暗色']).task;
+function buttonText(color){const channels=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722>.179?'#14202b':'#ffffff'}
+function applyPrefs(){vars.forEach((v,i)=>document.documentElement.style.setProperty(v,prefs.colors[i]||themes['暗色'][i]));const panel=prefs.colors[1]||themes['暗色'][1],rgb=[1,3,5].map(i=>parseInt(panel.slice(i,i+2),16));document.documentElement.style.colorScheme=rgb.reduce((a,b)=>a+b,0)>450?'light':'dark';for(const [name,color] of [['save',prefs.saveColor],['task',prefs.taskColor]]){document.documentElement.style.setProperty('--'+name+'-color',color);document.documentElement.style.setProperty('--'+name+'-text',buttonText(color))}$('journal').style.width=prefs.journalWidth+'%';$('details').style.height=prefs.detailsHeight+'%';$('journal').classList.toggle('collapsed',!!prefs.journalCollapsed);$('details').classList.toggle('collapsed',!!prefs.detailsCollapsed);$('journal-toggle').textContent=prefs.journalCollapsed?tr('日志','Journal'):tr('收起','Collapse');$('detail-toggle').textContent=prefs.detailsCollapsed?tr('展开','Expand'):tr('收起','Collapse');}
+function persistPrefs(){try{localStorage.setItem(uiKey,JSON.stringify(prefs))}catch{}applyPrefs()}
+function notify(msg){const el=$('toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.add('hidden'),3000)}
+function setDirty(value=true){dirty=value;$('save-status').textContent=value?tr('● 有未保存修改','● Unsaved changes'):lastSaved?tr(`✓ 已保存 ${lastSaved}`,`✓ Saved ${lastSaved}`):tr('尚未保存','Not saved yet');$('save-status').classList.toggle('dirty',value)}
+function snapshot(){return clone(data)}function commit(before){reconcileAllLanes();if(JSON.stringify(before)===JSON.stringify(data))return;undoStack.push(before);if(undoStack.length>100)undoStack.shift();redoStack=[];setDirty();render();}
+function mutate(fn){const before=snapshot();fn();commit(before)}
+function flushEdit(){if(editingSnapshot){const before=editingSnapshot;editingSnapshot=null;commit(before)}}
+function undo(){flushEdit();if(!undoStack.length)return;redoStack.push(snapshot());data=undoStack.pop();setDirty();render()}
+function redo(){flushEdit();if(!redoStack.length)return;undoStack.push(snapshot());data=redoStack.pop();setDirty();render()}
+function taskById(id){for(const p of data.timelineData){const t=p.tasks.find(t=>String(t.id)===String(id));if(t)return{p,t}}return null}
+function canShareLane(phase,laneId,task,start,end){return !phase.tasks.some(other=>other!==task&&other.laneId===laneId&&other.startTime<=end&&other.endTime>=start)}
+function reconcileLanes(phase){
+ const lanes=Array.isArray(phase.lanes)?phase.lanes.filter((id,i,a)=>typeof id==='string'&&id&&a.indexOf(id)===i):[];
+ const occupied=new Map(lanes.map(id=>[id,[]]));
+ for(const task of [...phase.tasks].sort((a,b)=>a.startTime.localeCompare(b.startTime)||String(a.id).localeCompare(String(b.id)))){
+  const fits=id=>!occupied.get(id).some(other=>other.endTime>=task.startTime&&other.startTime<=task.endTime);
+  const preferred=lanes.includes(task.laneId)&&fits(task.laneId)?task.laneId:null;
+  const assigned=preferred||lanes.find(fits);
+  task.laneId=assigned||uid();if(!assigned){lanes.push(task.laneId);occupied.set(task.laneId,[])}
+  occupied.get(task.laneId).push(task);
+ }
+ phase.lanes=lanes.filter(id=>phase.tasks.some(task=>task.laneId===id));
+}
+function reconcileAllLanes(){for(const phase of data.timelineData)reconcileLanes(phase)}
+function ensureRange(date){
+ if(date>=viewStart&&date<=viewEnd)return;
+ const span=Math.max(1,dayDiff(viewStart,viewEnd));
+ viewStart=addDays(date,-Math.floor(span/2));
+ viewEnd=addDays(viewStart,span);
+}
+function centerDate(date){ensureRange(date);renderTimeline();const sc=$('timeline-scroll');const corner=window.innerWidth<700?116:158;sc.scrollLeft=Math.max(0,dayDiff(viewStart,date)*scale+corner-(sc.clientWidth-corner)/2)}
+function selectDate(date,center=false){if(!validDate(date))return;flushEdit();viewDate=date;ensureRange(date);renderTimeline();renderJournal();if(center)centerDate(date)}
+function allDates(){let dates=[];for(const p of data.timelineData)for(const t of p.tasks){if(validDate(t.startTime))dates.push(t.startTime);if(validDate(t.endTime))dates.push(t.endTime)}for(const d of Object.keys(data.dailyLogs))if(validDate(d))dates.push(d);return dates.sort()}
+const MIN_SCALE=2,MAX_SCALE=160;
+function sliderToScale(value){return MIN_SCALE*(MAX_SCALE/MIN_SCALE)**(Number(value)/100)}
+function scaleToSlider(value){return Math.round(100*Math.log(value/MIN_SCALE)/Math.log(MAX_SCALE/MIN_SCALE))}
+function zoomTo(newScale,clientX){
+ const sc=$('timeline-scroll'),rect=sc.getBoundingClientRect(),corner=window.innerWidth<700?116:158;
+ const selectedX=corner+dayDiff(viewStart,viewDate)*scale-sc.scrollLeft;
+ const visible=selectedX>=corner&&selectedX<=sc.clientWidth;
+ const anchorX=clientX===undefined?(visible?selectedX:corner+(sc.clientWidth-corner)/2):Math.max(corner,Math.min(sc.clientWidth,clientX-rect.left));
+ const anchorDay=(sc.scrollLeft+anchorX-corner)/scale;
+ scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,newScale));
+ renderTimeline();sc.scrollLeft=corner+anchorDay*scale-anchorX;
+ $('zoom-slider').value=scaleToSlider(scale);
+ $('zoom-slider').title=tr(`时间轴缩放 ${Math.round(scale)} 像素/天`,`Timeline zoom: ${Math.round(scale)} px/day`);
+}
+function stepZoom(direction){zoomTo(sliderToScale(Math.max(0,Math.min(100,Number($('zoom-slider').value)+direction*5))))}
+function setViewRange(){
+ const start=$('view-start').value,end=$('view-end').value;
+ if(!validDate(start)||!validDate(end)||start>end){notify(tr('显示范围的结束日期不能早于开始日期','The display end date cannot be earlier than the start date'));$('view-start').value=viewStart;$('view-end').value=viewEnd;return}
+ viewStart=start;viewEnd=end;renderTimeline();$('timeline-scroll').scrollLeft=0;
+}
+let suppressTaskClick=false;
+function autoScrollWhileDragging(e){
+ const sc=$('timeline-scroll'),r=sc.getBoundingClientRect();
+ if(e.clientX>r.right-30)sc.scrollLeft+=18;else if(e.clientX<r.left+30)sc.scrollLeft-=18;
+ if(e.clientY>r.bottom-30)sc.scrollTop+=14;else if(e.clientY<r.top+70)sc.scrollTop-=14;
+}
+function taskDropTarget(e,task,source,start,end,vertical,startY){
+ const row=vertical?document.elementFromPoint(e.clientX,e.clientY)?.closest('.track-row[data-phase-id]'):null;
+ const phase=data.timelineData.find(p=>String(p.id)===row?.dataset.phaseId)||source;
+ if(!vertical||!row||phase===source&&Math.abs(e.clientY-startY)<18){
+  const index=Math.max(0,phase.lanes.indexOf(task.laneId));
+  const newLane=!canShareLane(phase,phase.lanes[index],task,start,end);
+  return {phase,row:row||[...$('tracks').children].find(el=>String(el.dataset.phaseId)===String(phase.id)),index:index+(newLane?1:0),newLane};
+ }
+ const local=e.clientY-row.getBoundingClientRect().top-12;
+ const boundary=Math.round(local/35),inGap=Math.abs(local-boundary*35)<=7;
+ let index=Math.max(0,Math.min(phase.lanes.length,Math.floor(local/35)));
+ let newLane=!phase.lanes.length||inGap||index===phase.lanes.length;
+ if(newLane)index=Math.max(0,Math.min(phase.lanes.length,boundary));
+ else if(!canShareLane(phase,phase.lanes[index],task,start,end)){index++;newLane=true}
+ return {phase,row,index,newLane};
+}
+function showLaneDrop(target){
+ document.querySelectorAll('.lane-drop').forEach(el=>el.remove());
+ const body=target.row?.querySelector('.track-body');if(!body)return;
+ const indicator=document.createElement('div');indicator.className='lane-drop'+(target.newLane?' new':'');
+ indicator.style.top=(target.newLane?7+target.index*35:12+target.index*35)+'px';body.append(indicator);
+}
+function bindTaskDrag(bar,task,source){
+ let drag=null;
+ bar.onpointerdown=e=>{
+  if(e.button!==0)return;
+  e.stopPropagation();
+  const r=bar.getBoundingClientRect(),sc=$('timeline-scroll'),edge=e.target.dataset.edge||'move';
+  drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,width:r.width,scroll:sc.scrollLeft,edge,active:false,ghost:null,caption:null,proposal:null};
+  bar.setPointerCapture(e.pointerId);
+ };
+ bar.onpointermove=e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  const dy=e.clientY-drag.y;
+  if(!drag.active&&Math.abs(e.clientX-drag.x)<=scale/2&&(drag.edge!=='move'||Math.abs(dy)<18))return;
+  if(!drag.active){drag.active=true;drag.ghost=bar.cloneNode(true);drag.ghost.classList.add('drag-ghost');drag.caption=document.createElement('div');drag.caption.className='drag-caption';document.body.append(drag.ghost,drag.caption)}
+  autoScrollWhileDragging(e);
+  const dx=e.clientX-drag.x+$('timeline-scroll').scrollLeft-drag.scroll,days=Math.round(dx/scale);
+  let start=task.startTime,end=task.endTime;
+  if(drag.edge==='start')start=addDays(start,Math.min(days,dayDiff(start,end)));
+  else if(drag.edge==='end')end=addDays(end,Math.max(days,-dayDiff(start,end)));
+  else {start=addDays(start,days);end=addDays(end,days)}
+  const vertical=drag.edge==='move'&&Math.abs(dy)>=18;
+  const target=taskDropTarget(e,task,source,start,end,vertical,drag.y);
+  drag.proposal={start,end,target};
+  drag.ghost.style.left=(drag.left+(drag.edge==='move'?e.clientX-drag.x:drag.edge==='start'?days*scale:0))+'px';drag.ghost.style.top=(drag.top+(drag.edge==='move'?dy:0))+'px';
+  drag.ghost.style.width=(drag.edge==='move'?drag.width:Math.max(25,drag.width+(drag.edge==='start'?-days:days)*scale))+'px';
+  drag.caption.textContent=tr(`${start} 至 ${end} · ${target.phase.phaseName}${target.newLane?' · 新轨道':''}`,`${start} to ${end} · ${target.phase.phaseName}${target.newLane?' · New lane':''}`);
+  drag.caption.style.left=Math.min(e.clientX+12,window.innerWidth-290)+'px';drag.caption.style.top=Math.max(4,e.clientY-35)+'px';
+  showLaneDrop(target);
+ };
+ function finish(e,cancel){if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;
+  if(bar.hasPointerCapture(e.pointerId))bar.releasePointerCapture(e.pointerId);
+  state.ghost?.remove();state.caption?.remove();document.querySelectorAll('.lane-drop').forEach(el=>el.remove());
+  if(cancel||!state.active||!state.proposal)return;
+  suppressTaskClick=true;setTimeout(()=>suppressTaskClick=false,0);
+  const {start,end,target}=state.proposal;
+  if(start===task.startTime&&end===task.endTime&&target.phase===source&&!target.newLane&&source.lanes[target.index]===task.laneId)return;
+  mutate(()=>{
+   if(target.phase!==source){source.tasks=source.tasks.filter(t=>t!==task);target.phase.tasks.push(task);source.updatedAt=stamp();target.phase.updatedAt=stamp()}
+   if(target.newLane){const id=uid();target.phase.lanes.splice(target.index,0,id);task.laneId=id}
+   else if(state.edge==='move')task.laneId=target.phase.lanes[target.index];
+   task.startTime=start;task.endTime=end;task.updatedAt=stamp();selection=task.id;
+  });
+  if(start<viewStart)viewStart=start;if(end>viewEnd)viewEnd=end;
+  renderTimeline();
+ }
+ bar.onpointerup=e=>finish(e,false);bar.onpointercancel=e=>finish(e,true);
+}
+function bindPhaseDrag(handle,phase){
+ let drag=null;
+ handle.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();const r=handle.getBoundingClientRect();drag={id:e.pointerId,y:e.clientY,left:r.left,top:r.top,active:false,ghost:null,target:phase};handle.setPointerCapture(e.pointerId)};
+ handle.onpointermove=e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  if(!drag.active&&Math.abs(e.clientY-drag.y)<18)return;
+  if(!drag.active){drag.active=true;drag.ghost=document.createElement('div');drag.ghost.className='drag-ghost phase-ghost';drag.ghost.textContent=phase.phaseName;document.body.append(drag.ghost)}
+  autoScrollWhileDragging(e);
+  drag.ghost.style.left=drag.left+'px';drag.ghost.style.top=(drag.top+e.clientY-drag.y)+'px';
+  document.querySelectorAll('.phase-drop').forEach(el=>el.classList.remove('phase-drop'));
+  const row=document.elementFromPoint(e.clientX,e.clientY)?.closest('.track-row[data-phase-id]');
+  drag.target=data.timelineData.find(p=>String(p.id)===row?.dataset.phaseId)||phase;
+  row?.classList.add('phase-drop');
+ };
+ function finish(e,cancel){if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;
+  if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);
+  state.ghost?.remove();document.querySelectorAll('.phase-drop').forEach(el=>el.classList.remove('phase-drop'));
+  if(cancel||!state.active||state.target===phase)return;
+  mutate(()=>{const from=data.timelineData.indexOf(phase),to=data.timelineData.indexOf(state.target);data.timelineData.splice(from,1);data.timelineData.splice(to,0,phase);data.phaseOrderUpdatedAt=stamp()});
+ }
+ handle.onpointerup=e=>finish(e,false);handle.onpointercancel=e=>finish(e,true);
+}
+function render(){document.title=data.projectName+tr(' · 工作时间轴',' · Work Timeline');if(document.activeElement!==$('workspace-name'))$('workspace-name').value=data.projectName;renderTimeline();renderDetails();renderJournal();if(!$('search-results').classList.contains('hidden'))renderSearch()}
+function renderTimeline(){
+ const len=dayDiff(viewStart,viewEnd)+1,width=len*scale,corner=window.innerWidth<700?116:158;
+ const ruler=$('ruler'),tracks=$('tracks');
+ ruler.style.width=width+'px';ruler.replaceChildren();tracks.replaceChildren();
+ $('axis-date').value=viewDate;$('view-start').value=viewStart;$('view-end').value=viewEnd;
+ $('axis-date').title=viewDate<viewStart||viewDate>viewEnd?tr('当前日志日期不在显示范围，重新选日期可移动时间轴','Journal date is outside the display range; choose a date to move the timeline'):tr('当前查看的日志日期','Currently viewed journal date');
+ const selectedIndex=viewDate>=viewStart&&viewDate<=viewEnd?dayDiff(viewStart,viewDate):-1;
+ const currentToday=today(),todayIndex=currentToday>=viewStart&&currentToday<=viewEnd?dayDiff(viewStart,currentToday):-1;
+ const mondayIndexes=[];
+ for(let i=0;i<len;i++){
+  const d=addDays(viewStart,i),first=i===0||d.slice(8)==='01';
+  if(first){
+   const lastOfMonth=d.slice(0,7)+'-'+String(new Date(Number(d.slice(0,4)),Number(d.slice(5,7)),0).getDate()).padStart(2,'0');
+   const m=document.createElement('div');m.className='month-span';m.style.left=i*scale+'px';m.style.width=Math.min(len-i,dayDiff(d,lastOfMonth)+1)*scale+'px';m.textContent=prefs.language==='en'?new Intl.DateTimeFormat('en-US',{year:'numeric',month:'long',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z')):d.slice(0,4)+'年'+Number(d.slice(5,7))+'月';m.title=m.textContent;ruler.append(m);
+  }
+  const monday=new Date(d+'T12:00:00Z').getUTCDay()===1;
+  if(monday)mondayIndexes.push(i);
+  if(scale>=25||(monday&&scale>=12)||i===selectedIndex||d.slice(8)==='01'){
+   const tick=document.createElement('span');
+   tick.className='day-tick'+(monday?' week-start':'')+(i===selectedIndex?' selected':'')+(i===todayIndex?' today-label':'');
+   tick.style.left=i*scale+'px';tick.style.width=(i===selectedIndex?Math.max(24,scale):scale)+'px';
+   tick.textContent=Number(d.slice(8));tick.title=d;ruler.append(tick);
+  }
+ }
+ let totalHeight=0;
+ for(const p of data.timelineData){
+  const row=document.createElement('div');row.className='track-row';row.dataset.phaseId=String(p.id);row.style.width=(corner+width)+'px';
+  const label=document.createElement('div');label.className='track-name';
+  const handle=document.createElement('button');handle.type='button';handle.className='phase-handle';handle.textContent='⋮⋮';handle.title=tr('拖动调整阶段顺序','Drag to reorder phases');handle.setAttribute('aria-label',tr('拖动阶段：','Drag phase: ')+p.phaseName);bindPhaseDrag(handle,p);
+  const swatch=document.createElement('input');swatch.type='color';swatch.className='phase-swatch';swatch.value=/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#879cad';swatch.style.backgroundColor=swatch.value;swatch.title=tr('点击修改阶段颜色','Click to change phase color');swatch.setAttribute('aria-label',p.phaseName+tr('颜色',' color'));
+  swatch.onchange=()=>mutate(()=>{p.color=swatch.value;p.updatedAt=stamp()});
+  const btn=document.createElement('button');btn.className='phase-edit';btn.textContent=p.phaseName;btn.title=tr('编辑阶段名称','Edit phase name');btn.onclick=()=>showPhaseModal(p);label.append(handle,swatch,btn);
+  const body=document.createElement('div');body.className='track-body';body.style.width=width+'px';body.style.setProperty('--day-px',scale+'px');
+  for(const t of p.tasks){
+   if(!validDate(t.startTime)||!validDate(t.endTime)||t.endTime<viewStart||t.startTime>viewEnd)continue;
+   const rowIndex=p.lanes.indexOf(t.laneId);if(rowIndex<0)continue;
+   const bar=document.createElement('div');bar.className='task-bar'+(String(selection)===String(t.id)?' selected':'');
+   bar.dataset.status=statuses[t.status]?t.status:'ongoing';bar.dataset.id=String(t.id);
+   bar.style.left=dayDiff(viewStart,t.startTime)*scale+'px';bar.style.top=(12+rowIndex*35)+'px';
+   bar.style.width=Math.max(scale,(dayDiff(t.startTime,t.endTime)+1)*scale-4)+'px';
+   bar.textContent=t.name;bar.title=tr(`${t.name}｜${t.startTime} 至 ${t.endTime}；中间拖动日期和轨道，边缘调整日期`,`${t.name} | ${t.startTime} to ${t.endTime}; drag the center to move, edges to resize`);
+   if((dayDiff(t.startTime,t.endTime)+1)*scale>=28)for(const edge of ['start','end']){const grip=document.createElement('span');grip.className='task-resize-handle '+edge;grip.dataset.edge=edge;grip.title=edge==='start'?tr('拖动开始日期','Drag start date'):tr('拖动结束日期','Drag end date');bar.append(grip)}
+   bindTaskDrag(bar,t,p);
+   bar.onclick=e=>{e.stopPropagation();if(suppressTaskClick){suppressTaskClick=false;return}selection=t.id;prefs.detailsCollapsed=false;persistPrefs();renderTimeline();renderDetails();[...document.querySelectorAll('.task-bar')].find(x=>x.dataset.id===String(t.id))?.scrollIntoView({block:'nearest',inline:'nearest'})};
+   body.append(bar);
+  }
+  const height=Math.max(56,p.lanes.length*35+20);body.style.height=height+'px';row.style.height=height+'px';
+  if(scale>=10)for(const i of mondayIndexes){const line=document.createElement('div');line.className='week-divider';line.style.left=i*scale+'px';body.append(line)}
+  if(todayIndex>=0){const line=document.createElement('div');line.className='today-track-line';line.style.left=todayIndex*scale+'px';body.append(line)}
+  if(selectedIndex>=0){const line=document.createElement('div');line.className='cursor-track-line';line.style.left=selectedIndex*scale+'px';body.append(line)}
+  row.append(label,body);tracks.append(row);totalHeight+=height;
+ }
+ if(!data.timelineData.length){const blank=document.createElement('div');blank.className='track-row';blank.style.width=(corner+width)+'px';blank.textContent=tr('　点击「＋ 阶段」开始','　Click “＋ Phase” to begin');tracks.append(blank);totalHeight+=56}
+ $('ruler-row').style.width=(width+corner)+'px';tracks.style.width=(width+corner)+'px';
+}
+function scrollTask(t){centerDate(t.startTime);const bar=[...document.querySelectorAll('.task-bar')].find(e=>e.dataset.id===String(t.id));bar?.scrollIntoView({block:'nearest',inline:'nearest'})}
+function selectTask(id){flushEdit();selection=id;prefs.detailsCollapsed=false;persistPrefs();renderDetails();renderTimeline();const found=taskById(id);if(found)scrollTask(found.t)}
+function bindField(el,change){el.addEventListener('focus',()=>{if(!editingSnapshot)editingSnapshot=snapshot()});el.addEventListener('input',()=>{change(el.value);setDirty();if(el.dataset.name==='name'){const f=taskById(selection);if(f){f.t.updatedAt=stamp();renderTimeline()}}});el.addEventListener('change',()=>{change(el.value);flushEdit()});el.addEventListener('blur',flushEdit)}
+function field(container,label,value,type,change,wide=false){const wrap=document.createElement('div');wrap.className='field'+(wide?' wide':'');const lab=document.createElement('label');lab.textContent=label;const el=document.createElement(type==='textarea'?'textarea':type==='select'?'select':'input');if(type==='select'){for(const [v,l] of Object.entries(change.options)){const o=document.createElement('option');o.value=v;o.textContent=l;el.append(o)}el.value=value;bindField(el,change.set)}else{if(type!=='textarea')el.type=type;el.value=value||'';bindField(el,change)}if(label===tr('任务名称','Task name'))el.dataset.name='name';wrap.append(lab,el);container.append(wrap);return el}
+function renderDetails(){
+ const found=taskById(selection),host=$('detail-content');host.replaceChildren();
+ $('detail-hint').textContent=found?found.t.name:tr('选中时间轴上的任务','Select a task on the timeline');
+ if(!found){const hint=document.createElement('p');hint.className='muted';hint.textContent=tr('选中任务后，可在这里编辑基本信息和子任务。','Select a task to edit its details and subtasks here.');host.append(hint);return}
+ const {p,t}=found,grid=document.createElement('div'),left=document.createElement('div'),right=document.createElement('div');grid.className='details-grid';left.className=right.className='details-col';
+ const fields=document.createElement('div');fields.className='task-fields';
+ const set=(key,validate)=>v=>{if(validate&&!validate(v))return;t[key]=v;t.updatedAt=stamp()};
+ field(fields,tr('任务名称','Task name'),t.name,'text',set('name',v=>v.trim()),true);
+ field(fields,tr('开始日期','Start date'),t.startTime,'date',v=>{if(validDate(v)&&v<=t.endTime){t.startTime=v;t.updatedAt=stamp()}});
+ field(fields,tr('结束日期','End date'),t.endTime,'date',v=>{if(validDate(v)&&v>=t.startTime){t.endTime=v;t.updatedAt=stamp()}});
+ field(fields,tr('状态','Status'),t.status,'select',{options:Object.fromEntries(Object.keys(statuses).map(key=>[key,statusLabel(key)])),set:set('status')});
+ field(fields,tr('所属阶段','Phase'),p.id,'select',{options:Object.fromEntries(data.timelineData.map(x=>[x.id,x.phaseName])),set:v=>{const target=data.timelineData.find(x=>String(x.id)===v);if(target&&target!==p){p.tasks=p.tasks.filter(x=>x!==t);target.tasks.push(t);t.updatedAt=stamp()}}});
+ field(fields,tr('负责人（可选）','Assignee (optional)'),t.assignee||'','text',set('assignee'),true);
+ field(fields,tr('链接（可选）','Link (optional)'),t.link||'','url',set('link'),true);
+ field(fields,tr('任务描述','Description'),t.description||'','textarea',set('description'),true);left.append(fields);
+ const title=document.createElement('h3');title.textContent=tr('子任务 ','Subtasks ')+`${t.subTasks.filter(sub=>sub.status==='completed').length}/${t.subTasks.length}`;right.append(title);
+ for(const sub of t.subTasks){
+  const line=document.createElement('div');line.className='sub-item';line.dataset.subId=sub.id;
+  const check=document.createElement('input');check.type='checkbox';check.checked=sub.status==='completed';check.title=tr('标记已完成','Mark completed');check.onchange=()=>mutate(()=>{sub.status=check.checked?'completed':'ongoing';sub.updatedAt=stamp();t.updatedAt=stamp()});
+  const input=document.createElement('input');input.type='text';input.value=sub.text;input.setAttribute('aria-label',tr('子任务内容','Subtask text'));bindField(input,v=>{sub.text=v;sub.updatedAt=stamp();t.updatedAt=stamp()});
+  const edit=document.createElement('button');edit.textContent=tr('编辑','Edit');edit.title=tr('编辑子任务状态和描述','Edit subtask status and description');edit.onclick=()=>showSubModal(t,sub);
+  const del=document.createElement('button');del.textContent='×';del.title=tr('删除子任务','Delete subtask');del.onclick=()=>mutate(()=>{t.subTasks=t.subTasks.filter(x=>x!==sub);t.updatedAt=stamp()});line.append(check,input,edit,del);right.append(line)
+ }
+ const add=document.createElement('button');add.textContent=tr('＋ 添加子任务','＋ Add subtask');add.onclick=()=>showSubModal(t,null);right.append(add);grid.append(left,right);host.append(grid);
+ const foot=document.createElement('div');foot.className='details-footer';
+ const remove=document.createElement('button');remove.className='danger';remove.textContent=tr('删除任务','Delete task');remove.onclick=()=>confirmAction(tr('删除任务','Delete task'),tr(`确定删除「${t.name}」？`,`Delete “${t.name}”?`),()=>mutate(()=>{p.tasks=p.tasks.filter(x=>x!==t);selection=null}));
+ const done=document.createElement('button');done.className='primary';done.textContent=tr('保存修改','Apply changes');done.title=tr('应用当前输入；Ctrl+S 导出整个 JSON','Apply edits in this page; Ctrl+S downloads the complete JSON');done.onclick=()=>{flushEdit();notify(tr('修改已应用；请按 Ctrl+S 保存 JSON','Changes applied; press Ctrl+S to save the JSON'))};
+ foot.append(remove,done);host.append(foot)
+}
+function getLog(date){return data.dailyLogs[date]||{completed:[],issues:[],plans:[],notes:'',updatedAt:''}}
+function ensureLog(date){return data.dailyLogs[date]||(data.dailyLogs[date]={completed:[],issues:[],plans:[],notes:'',updatedAt:stamp()})}
+function renderJournal(){
+ const date=viewDate;$('journal-date').value=date;const related=$('related');related.replaceChildren();
+ for(const p of data.timelineData)for(const t of p.tasks)if(t.startTime<=date&&t.endTime>=date){const btn=document.createElement('button');btn.textContent=t.name;btn.title=p.phaseName;btn.onclick=()=>selectTask(t.id);related.append(btn)}
+ if(!related.children.length){const span=document.createElement('span');span.className='small muted';span.textContent=tr('这天没有排定任务','No tasks scheduled for this day');related.append(span)}
+ const host=$('log-fields');host.replaceChildren();const log=getLog(date);
+ for(const key of ['completed','issues','plans']){
+  const label=logLabel(key),block=document.createElement('section');block.className='log-block';const h=document.createElement('h3');h.textContent=label;block.append(h);
+  const entries=document.createElement('div');entries.className='entries';
+  (log[key]||[]).forEach((entry,i)=>{
+   const line=document.createElement('div');line.className='entry';line.dataset.entryId=entry.id;
+   const num=document.createElement('span');num.className='number';num.textContent=(i+1)+'.';
+   const input=document.createElement('textarea');input.rows=1;input.value=entry.text;input.placeholder=tr('写一条记录…','Write an entry…');input.setAttribute('aria-label',tr(`${label}第${i+1}条`,`${label}, entry ${i+1}`));
+   input.onfocus=()=>{if(!editingSnapshot)editingSnapshot=snapshot()};input.oninput=()=>{entry.text=input.value;entry.updatedAt=stamp();ensureLog(date).updatedAt=stamp();setDirty()};input.onblur=flushEdit;
+   input.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();flushEdit();const pos=ensureLog(date)[key].findIndex(x=>x.id===entry.id);mutate(()=>{ensureLog(date)[key].splice(pos+1,0,{id:uid(),text:'',updatedAt:stamp()});ensureLog(date).updatedAt=stamp()});focusEntry(key,pos+1)}else if(e.key==='Backspace'&&!input.value&&getLog(date)[key].length>1){e.preventDefault();flushEdit();mutate(()=>{ensureLog(date)[key]=ensureLog(date)[key].filter(x=>x.id!==entry.id);ensureLog(date).updatedAt=stamp()});focusEntry(key,Math.max(0,i-1))}};
+   const del=document.createElement('button');del.textContent='×';del.title=tr('删除此条','Delete this entry');del.onclick=()=>mutate(()=>{ensureLog(date)[key]=ensureLog(date)[key].filter(x=>x.id!==entry.id);ensureLog(date).updatedAt=stamp()});
+   line.append(num,input,del);entries.append(line)
+  });
+  block.append(entries);
+  const add=document.createElement('button');add.className='quiet';add.textContent=tr('＋ 添加一条','＋ Add entry');add.onclick=()=>{const index=getLog(date)[key].length;mutate(()=>{ensureLog(date)[key].push({id:uid(),text:'',updatedAt:stamp()});ensureLog(date).updatedAt=stamp()});focusEntry(key,index)};block.append(add);host.append(block)
+ }
+ const notes=document.createElement('section');notes.className='log-block';const heading=document.createElement('h3');heading.textContent=logLabel('notes');notes.append(heading);
+ const textarea=document.createElement('textarea');textarea.className='notes';textarea.placeholder=tr('可以自由写多行备注…','Write any notes here…');textarea.value=log.notes||'';
+ textarea.onfocus=()=>{if(!editingSnapshot)editingSnapshot=snapshot()};textarea.oninput=()=>{ensureLog(date).notes=textarea.value;ensureLog(date).updatedAt=stamp();setDirty()};textarea.onblur=flushEdit;notes.append(textarea);host.append(notes)
+}
+function focusEntry(key,index){const block=[...document.querySelectorAll('.log-block')].find(x=>x.querySelector('h3')?.textContent===logLabel(key));block?.querySelectorAll('.entry textarea')[index]?.focus()}
+function modal(html){$('modal').innerHTML=html;$('modal-cover').classList.remove('hidden');$('modal').querySelectorAll('[data-close]').forEach(x=>x.onclick=closeModal)}function closeModal(){$('modal-cover').classList.add('hidden');$('modal').replaceChildren()}
+function confirmAction(title,message,action){modal(`<h2>${safe(title)}</h2><p>${safe(message)}</p><div class="modal-actions"><button data-close>${tr('取消','Cancel')}</button><button id="confirm" class="danger">${tr('确定','Confirm')}</button></div>`);$('confirm').onclick=()=>{closeModal();action()}}
+function showPhaseModal(p){
+ modal(`<h2>${p?tr('编辑阶段','Edit phase'):tr('新增阶段','Add phase')}</h2><form id="phase-form" class="field"><label>${tr('阶段名称','Phase name')}<input id="phase-name" required maxlength="100" value="${safe(p?.phaseName||'')}"></label><label class="phase-color-field">${tr('阶段颜色','Phase color')}<input id="phase-color" type="color" value="${/^#[0-9a-f]{6}$/i.test(p?.color)?p.color:'#879cad'}"></label><div class="modal-actions">${p?`<button type="button" id="delete-phase" class="danger">${tr('删除阶段','Delete phase')}</button>`:''}<button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('保存','Save')}</button></div></form>`);
+ $('phase-form').onsubmit=e=>{e.preventDefault();const name=$('phase-name').value.trim();if(!name)return;mutate(()=>{if(p){p.phaseName=name;p.color=$('phase-color').value;p.updatedAt=stamp()}else data.timelineData.push({id:uid(),phaseName:name,color:$('phase-color').value,lanes:[],tasks:[],updatedAt:stamp()})});closeModal()};
+ if(p)$('delete-phase').onclick=()=>confirmAction(tr('删除阶段','Delete phase'),tr(`确定删除「${p.phaseName}」及其中 ${p.tasks.length} 个任务？`,`Delete “${p.phaseName}” and its ${p.tasks.length} task(s)?`),()=>mutate(()=>{data.timelineData=data.timelineData.filter(x=>x!==p);if(!taskById(selection))selection=null}))
+}
+function showTaskModal(){
+ if(!data.timelineData.length){notify(tr('请先添加阶段','Add a phase first'));return}
+ modal(`<h2>${tr('新增任务','Add task')}</h2><form id="task-form" class="field"><label>${tr('所属阶段','Phase')}<select id="task-phase">${data.timelineData.map(p=>`<option value="${safe(p.id)}">${safe(p.phaseName)}</option>`).join('')}</select></label><label>${tr('任务名称','Task name')}<input id="task-name" required maxlength="200"></label><label>${tr('开始日期','Start date')}<input id="task-start" type="date" value="${viewDate}" required></label><label>${tr('结束日期','End date')}<input id="task-end" type="date" value="${viewDate}" required></label><label>${tr('描述','Description')}<textarea id="task-description"></textarea></label><div class="modal-actions"><button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('创建','Create')}</button></div></form>`);
+ $('task-form').onsubmit=e=>{e.preventDefault();const start=$('task-start').value,end=$('task-end').value;if(!validDate(start)||!validDate(end)||start>end){notify(tr('结束日期不能早于开始日期','End date cannot be earlier than start date'));return}const p=data.timelineData.find(p=>String(p.id)===$('task-phase').value);let id=uid();mutate(()=>p.tasks.push({id,name:$('task-name').value.trim(),description:$('task-description').value,status:'ongoing',assignee:'',link:'',startTime:start,endTime:end,subTasks:[],updatedAt:stamp()}));ensureRange(start);ensureRange(end);closeModal();selectTask(id)}
+}
+function showSubModal(task,sub){
+ modal(`<h2>${sub?tr('编辑','Edit'):tr('新增','Add')}${tr('子任务',' subtask')}</h2><form id="sub-form" class="field"><label>${tr('内容','Text')}<input id="sub-name" required value="${safe(sub?.text||'')}"></label><label>${tr('描述','Description')}<textarea id="sub-desc">${safe(sub?.description||'')}</textarea></label><label>${tr('状态','Status')}<select id="sub-status">${Object.keys(statuses).map(v=>`<option value="${v}">${statusLabel(v)}</option>`).join('')}</select></label><div class="modal-actions"><button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('保存','Save')}</button></div></form>`);
+ $('sub-status').value=sub?.status||'ongoing';$('sub-form').onsubmit=e=>{e.preventDefault();const name=$('sub-name').value.trim();if(!name)return;mutate(()=>{if(sub){sub.text=name;sub.description=$('sub-desc').value;sub.status=$('sub-status').value;sub.updatedAt=stamp()}else task.subTasks.push({id:uid(),text:name,description:$('sub-desc').value,status:$('sub-status').value,updatedAt:stamp()});task.updatedAt=stamp()});closeModal()}
+}
+function safeName(s){return (s||tr('工作记录','Work Record')).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').trim().slice(0,80)||tr('工作记录','Work Record')}
+function exportData(){flushEdit();const dates=allDates(),start=dates[0]||viewDate,end=dates.at(-1)||viewDate;return {filename:`${start.replaceAll('-','').slice(2)}_${end.replaceAll('-','').slice(2)}_${safeName(data.projectName)}.json`,content:JSON.stringify(data,null,2)}}
+function download(filename,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+function save(){const {filename,content}=exportData();download(filename,content,'application/json;charset=utf-8');lastSaved=new Date().toLocaleTimeString(prefs.language==='en'?'en-US':'zh-CN',{hour:'2-digit',minute:'2-digit'});setDirty(false);notify(tr('已发起 JSON 下载，请确认浏览器已保存文件','JSON download started; confirm the browser saved it'))}
+function exportMarkdown(){
+ flushEdit();let out=`# ${data.projectName}\n\n## ${tr('任务','Tasks')}\n`;
+ for(const p of data.timelineData){
+  out+=`\n### ${p.phaseName}\n`;
+  for(const t of [...p.tasks].sort((a,b)=>p.lanes.indexOf(a.laneId)-p.lanes.indexOf(b.laneId)||a.startTime.localeCompare(b.startTime))){
+   out+=tr(`\n- ${t.name}（${t.startTime}—${t.endTime}，${statusLabel(t.status)}）\n`,`\n- ${t.name} (${t.startTime}–${t.endTime}, ${statusLabel(t.status)})\n`);
+   if(t.description)out+=`  ${t.description.replaceAll('\n','\n  ')}\n`;
+   for(const sub of t.subTasks)out+=`  - ${sub.status==='completed'?'[x]':'[ ]'} ${sub.text}\n`
+  }
+ }
+ out+=`\n## ${tr('每日记录','Daily journal')}\n`;
+ for(const date of Object.keys(data.dailyLogs).sort()){
+  const log=data.dailyLogs[date];out+=`\n### ${date}\n`;
+  for(const key of ['completed','issues','plans']){out+=`\n**${logLabel(key)}**\n`;for(const [i,e] of (log[key]||[]).entries())if(e.text)out+=`${i+1}. ${e.text}\n`}
+  if(log.notes)out+=`\n**${logLabel('notes')}**\n\n${log.notes}\n`
+ }
+ download(safeName(data.projectName)+'.md',out,'text/markdown;charset=utf-8')
+}
+function normalize(obj){
+ if(!obj||!Array.isArray(obj.timelineData))throw Error(tr('缺少阶段和任务数据','Missing phase and task data'));
+ const out={version:3,projectName:String(obj.projectName||tr('工作记录','Work record')),phaseOrderUpdatedAt:String(obj.phaseOrderUpdatedAt||''),timelineData:[],dailyLogs:{}};
+ for(const p of obj.timelineData){
+  if(!p||!Array.isArray(p.tasks))throw Error(tr('阶段数据不完整','Incomplete phase data'));
+  const phase={...p,id:p.id??uid(),phaseName:String(p.phaseName||tr('未命名阶段','Unnamed phase')),color:/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#879cad',lanes:Array.isArray(p.lanes)?p.lanes.filter(id=>typeof id==='string'):[],updatedAt:p.updatedAt||'',tasks:[]};
+  for(const t of p.tasks){
+   if(!validDate(t.startTime)||!validDate(t.endTime)||t.startTime>t.endTime)throw Error(tr('任务日期无效','Invalid task dates'));
+   phase.tasks.push({...t,id:t.id??uid(),name:String(t.name||tr('未命名任务','Unnamed task')),description:String(t.description||''),status:statuses[t.status]?t.status:'ongoing',startTime:t.startTime,endTime:t.endTime,laneId:typeof t.laneId==='string'?t.laneId:'',subTasks:Array.isArray(t.subTasks)?t.subTasks.map(sub=>({...sub,id:sub.id??uid(),text:String(sub.text||''),status:statuses[sub.status]?sub.status:'ongoing'})):[],updatedAt:t.updatedAt||''});
+  }
+  if(!Array.isArray(p.lanes)){
+   const ends=[];
+   for(const task of [...phase.tasks].sort((a,b)=>a.startTime.localeCompare(b.startTime)||String(a.id).localeCompare(String(b.id)))){
+    let i=ends.findIndex(end=>end<task.startTime);if(i<0){i=ends.length;ends.push(task.endTime);phase.lanes.push('legacy:'+String(phase.id)+':'+i)}else ends[i]=task.endTime;
+    task.laneId=phase.lanes[i];
+   }
+  }
+  reconcileLanes(phase);out.timelineData.push(phase);
+ }
+ if(obj.dailyLogs&&typeof obj.dailyLogs==='object'&&!Array.isArray(obj.dailyLogs))for(const [date,log] of Object.entries(obj.dailyLogs)){
+  if(!validDate(date)||!log||typeof log!=='object')continue;
+  out.dailyLogs[date]={updatedAt:log.updatedAt||'',notes:String(log.notes||'')};
+  for(const key of ['completed','issues','plans'])out.dailyLogs[date][key]=Array.isArray(log[key])?log[key].map(e=>typeof e==='string'?{id:uid(),text:e,updatedAt:''}:{id:e.id??uid(),text:String(e.text||''),updatedAt:e.updatedAt||''}):[];
+ }
+ return out;
+}
+function newer(a,b){return String(b.updatedAt||'')>String(a.updatedAt||'')?b:a}
+function mergeData(incoming){
+ const phases=new Map(data.timelineData.map(p=>[String(p.id),p]));
+ const owners=new Map();
+ for(const p of data.timelineData)for(const t of p.tasks)owners.set(String(t.id),{p,t});
+ for(const source of incoming.timelineData){
+  let target=phases.get(String(source.id));
+  if(!target){target={...source,tasks:[]};data.timelineData.push(target);phases.set(String(target.id),target)}
+  else {
+   const newerPhase=String(source.updatedAt||'')>String(target.updatedAt||'');
+   target.lanes=[...(newerPhase?source.lanes:target.lanes),...(newerPhase?target.lanes:source.lanes).filter(id=>!(newerPhase?source.lanes:target.lanes).includes(id))];
+   if(newerPhase){target.phaseName=source.phaseName;target.color=source.color;target.updatedAt=source.updatedAt}
+  }
+  for(const incomingTask of source.tasks){
+   const key=String(incomingTask.id),owned=owners.get(key);
+   if(!owned){target.tasks.push(incomingTask);owners.set(key,{p:target,t:incomingTask});continue}
+   const {p:oldPhase,t:oldTask}=owned;
+   const newIsLater=String(incomingTask.updatedAt||'')>String(oldTask.updatedAt||'');
+   const oldSubs=oldTask.subTasks;
+   Object.assign(oldTask,newer(oldTask,incomingTask),{subTasks:oldSubs});
+   const subs=new Map(oldSubs.map(x=>[String(x.id),x]));
+   for(const sub of incomingTask.subTasks){
+    const prior=subs.get(String(sub.id));
+    if(prior)Object.assign(prior,newer(prior,sub));
+    else if(!oldSubs.some(x=>x.text===sub.text&&sub.text)){oldSubs.push(sub);subs.set(String(sub.id),sub)}
+   }
+   if(newIsLater&&oldPhase!==target){oldPhase.tasks=oldPhase.tasks.filter(x=>x!==oldTask);target.tasks.push(oldTask);owners.set(key,{p:target,t:oldTask})}
+  }
+ }
+ if(String(incoming.phaseOrderUpdatedAt||'')>String(data.phaseOrderUpdatedAt||'')){
+  const order=new Map(incoming.timelineData.map((phase,i)=>[String(phase.id),i]));
+  data.timelineData.sort((a,b)=>(order.get(String(a.id))??Infinity)-(order.get(String(b.id))??Infinity));
+  data.phaseOrderUpdatedAt=incoming.phaseOrderUpdatedAt;
+ }
+ for(const [date,log] of Object.entries(incoming.dailyLogs)){
+  const old=data.dailyLogs[date];if(!old){data.dailyLogs[date]=log;continue}
+  if(String(log.updatedAt||'')>String(old.updatedAt||'')){old.notes=log.notes;old.updatedAt=log.updatedAt}
+  for(const key of ['completed','issues','plans']){
+   const ids=new Map(old[key].map(e=>[String(e.id),e]));
+   for(const e of log[key]){
+    const match=ids.get(String(e.id));
+    if(match)Object.assign(match,newer(match,e));
+    else if(!old[key].some(x=>x.text===e.text&&e.text)){old[key].push(e);ids.set(String(e.id),e)}
+   }
+  }
+ }
+}
+async function importFiles(files,merge){
+ try{
+  const incoming=[];
+  for(const file of files)incoming.push(normalize(JSON.parse(await file.text())));
+  mutate(()=>{
+   if(!merge){data=incoming.shift();selection=null}
+   for(const item of incoming)mergeData(item);
+  });
+  notify(tr(`已${merge?'合并':'导入'} ${files.length} 个 JSON 文件；请保存新的完整 JSON`,`${merge?'Merged':'Imported'} ${files.length} JSON file(s); save a new complete JSON backup`));
+ }catch(error){notify(tr('导入失败：','Import failed: ')+(error?.message||tr('文件无效','Invalid file')))}
+}
+function askImport(files){
+ if(!files.length)return;
+ modal(`<h2>${tr(`导入 ${files.length} 个 JSON 文件`,`Import ${files.length} JSON file(s)`)}</h2><p>${tr('请选择如何处理现有数据。合并时相同 ID 会采用更新的条目；不同 ID 会加入，按日期汇合每日记录。','Choose how to handle current data. When merging, matching IDs use the newer entry; new IDs are added and journal entries are combined by date.')}</p><div class="modal-actions"><button data-close>${tr('取消','Cancel')}</button><button id="replace">${tr('替换当前数据','Replace current data')}</button><button id="merge" class="primary">${tr('合并到当前数据','Merge into current data')}</button></div>`);
+ $('replace').onclick=()=>{closeModal();importFiles(files,false)};$('merge').onclick=()=>{closeModal();importFiles(files,true)}
+}
+function highlight(s,q){const str=String(s??''),at=str.toLocaleLowerCase().indexOf(q.toLocaleLowerCase());return at<0?safe(str):safe(str.slice(0,at))+'<mark>'+safe(str.slice(at,at+q.length))+'</mark>'+safe(str.slice(at+q.length))}
+function searchItems(q){
+ const results=[];
+ for(const p of data.timelineData){
+  if(p.phaseName.toLocaleLowerCase().includes(q))results.push({kind:'任务',title:p.phaseName,sub:tr('阶段','Phase'),date:p.tasks[0]?.startTime||viewDate,id:p.tasks[0]?.id});
+  for(const t of p.tasks){
+   for(const [label,value] of [[tr('任务','Task'),t.name],[tr('任务描述','Task description'),t.description||'']])if(value.toLocaleLowerCase().includes(q))results.push({kind:'任务',title:value,sub:`${p.phaseName} · ${t.startTime}—${t.endTime} · ${label}`,date:t.startTime,id:t.id});
+   for(const sub of t.subTasks)if((sub.text+' '+(sub.description||'')).toLocaleLowerCase().includes(q))results.push({kind:'子任务',title:sub.text,sub:t.name,date:t.startTime,id:t.id,subId:sub.id})
+  }
+ }
+ for(const [date,log] of Object.entries(data.dailyLogs)){
+  for(const key of ['completed','issues','plans'])for(const entry of log[key]||[])if(entry.text.toLocaleLowerCase().includes(q))results.push({kind:'每日记录',title:entry.text,sub:`${date} · ${logLabel(key)}`,date,entryId:entry.id});
+  if((log.notes||'').toLocaleLowerCase().includes(q))results.push({kind:'每日记录',title:log.notes,sub:`${date} · ${logLabel('notes')}`,date})
+ }
+ return results
+}
+function kindLabel(kind){return prefs.language==='en'?({'全部':'All','任务':'Tasks','每日记录':'Journal','子任务':'Subtasks'}[kind]||kind):kind}
+function renderSearch(){
+ const q=$('search').value.trim(),panel=$('search-results');if(!q){panel.classList.add('hidden');return}
+ const results=searchItems(q);panel.classList.remove('hidden');panel.replaceChildren();
+ const head=document.createElement('div');head.innerHTML=`<strong>${tr(`搜索结果 ${results.length}`,`Search results: ${results.length}`)}</strong> <span class="muted small">${tr('点击可跳到对应日期或任务','Click to open the date or task')}</span>`;panel.append(head);
+ const tabs=document.createElement('div');tabs.className='tabs';
+ for(const type of ['全部','任务','每日记录','子任务']){const button=document.createElement('button');button.textContent=kindLabel(type)+' '+(type==='全部'?results.length:results.filter(r=>r.kind===type).length);button.classList.toggle('active',filter===type);button.onclick=()=>{filter=type;renderSearch()};tabs.append(button)}panel.append(tabs);
+ const shown=results.filter(x=>filter==='全部'||x.kind===filter).slice(0,100);
+ if(!shown.length){const empty=document.createElement('p');empty.className='muted';empty.textContent=tr('没有匹配内容','No matches');panel.append(empty)}
+ for(const r of shown){
+  const btn=document.createElement('button');btn.className='result-row';btn.innerHTML=`<span class="small muted">${safe(kindLabel(r.kind))} · ${safe(r.sub)}</span><br>${highlight(r.title,q)}`;
+  btn.onclick=()=>{panel.classList.add('hidden');if(r.kind==='每日记录'){selectDate(r.date,true);requestAnimationFrame(()=>{const line=[...document.querySelectorAll('.entry')].find(e=>String(e.dataset.entryId)===String(r.entryId));const target=line||document.querySelector('.notes');target?.scrollIntoView({block:'center'});target?.animate([{outline:'2px solid var(--cursor)'},{outline:'2px solid transparent'}],{duration:1800})})}else if(r.id){selectTask(r.id);if(r.subId)requestAnimationFrame(()=>document.querySelector(`.sub-item[data-sub-id="${CSS.escape(String(r.subId))}"]`)?.scrollIntoView({block:'center'}))}else selectDate(r.date,true)};
+  panel.append(btn)
+ }
+ if(results.length>100&&filter==='全部'){const note=document.createElement('p');note.className='muted';note.textContent=tr('仅显示前 100 条，请输入更多关键词','Showing the first 100 results; enter more keywords to narrow the search');panel.append(note)}
+}
+function showSettings(){
+ modal(`<h2>${tr('外观设置','Appearance settings')}</h2><label>${tr('界面语言','Interface language')} <select id="language"><option value="zh">简体中文</option><option value="en">English</option></select></label><p class="small muted">${tr('切换语言不会翻译已输入的任务名称或记录内容。','Switching languages does not translate your task names or journal entries.')}</p><label>${tr('主题预设','Theme preset')} <select id="theme"><option value="暗色">${tr('暗色','Dark')}</option><option value="浅色">${tr('浅色','Light')}</option><option value="柔和">${tr('柔和','Soft')}</option><option value="自定义">${tr('自定义','Custom')}</option></select></label><p class="small muted">${tr('阶段颜色可直接点击时间轴左侧的小方块修改。','Click a square beside a phase to change its color.')}</p><h3>${tr('界面颜色','Interface colors')}</h3><div class="settings-grid" id="settings-grid"></div><h3>${tr('常用按钮','Main buttons')}</h3><div class="settings-grid" id="button-colors"></div><div class="modal-actions"><button data-close>${tr('完成','Done')}</button></div>`);
+ $('language').value=prefs.language;$('theme').value=prefs.theme;
+ $('language').onchange=()=>{const value=$('language').value;if(!['zh','en'].includes(value))return;prefs.language=value;persistPrefs();localizeStatic();render();showSettings()};
+ const colors=$('settings-grid'),buttons=$('button-colors');
+ function draw(){
+  colors.replaceChildren();
+  const names=prefs.language==='en'?['Background','Panel','Main text','Secondary text','Grid lines','Month divider','Today line','Date cursor','In progress','Issue','Incomplete','Completed']:themeNames;
+  names.forEach((name,i)=>{const line=document.createElement('label');line.className='color-field';line.textContent=name;const input=document.createElement('input');input.type='color';input.value=prefs.colors[i];input.oninput=()=>{prefs.colors[i]=input.value;prefs.theme='自定义';$('theme').value='自定义';persistPrefs()};line.append(input);colors.append(line)});
+  buttons.replaceChildren();
+  for(const [key,name] of [['saveColor',tr('保存 JSON 按钮','Save JSON button')],['taskColor',tr('添加任务按钮','Add task button')]]){const line=document.createElement('label');line.className='color-field';line.textContent=name;const input=document.createElement('input');input.type='color';input.value=prefs[key];input.oninput=()=>{prefs[key]=input.value;prefs.theme='自定义';$('theme').value='自定义';persistPrefs()};line.append(input);buttons.append(line)}
+ }
+ draw();
+ $('theme').onchange=()=>{const name=$('theme').value;if(themes[name]){prefs.theme=name;prefs.colors=themes[name].slice();prefs.saveColor=buttonThemes[name].save;prefs.taskColor=buttonThemes[name].task;persistPrefs();draw()}}
+}
+function splitter(el,axis){let initial=null;el.addEventListener('pointerdown',e=>{initial={x:e.clientX,y:e.clientY,width:$('journal').getBoundingClientRect().width,height:$('details').getBoundingClientRect().height};el.setPointerCapture(e.pointerId);e.preventDefault()});el.addEventListener('pointermove',e=>{if(!initial)return;if(axis==='x'){prefs.journalCollapsed=false;const width=Math.max(280,Math.min(window.innerWidth*.55,initial.width+initial.x-e.clientX));prefs.journalWidth=width/$('workspace').clientWidth*100}else{prefs.detailsCollapsed=false;const height=Math.max(52,Math.min($('left').clientHeight-120,initial.height+initial.y-e.clientY));prefs.detailsHeight=height/$('left').clientHeight*100}applyPrefs()});el.addEventListener('pointerup',()=>{if(initial){initial=null;persistPrefs();renderTimeline()}});el.addEventListener('dblclick',()=>{if(axis==='x')prefs.journalWidth=30;else prefs.detailsHeight=35;persistPrefs();renderTimeline()})}
+function setupPan(){let state=null;const sc=$('timeline-scroll');sc.addEventListener('wheel',e=>{if(!e.altKey)return;e.preventDefault();const dy=Math.max(-240,Math.min(240,e.deltaY*(e.deltaMode===1?16:1)));zoomTo(scale*Math.exp(-dy*.0015),e.clientX)},{passive:false});sc.addEventListener('pointerdown',e=>{if(e.target.closest('.task-bar,.track-name,.ruler'))return;state={x:e.clientX,left:sc.scrollLeft,moved:false};sc.setPointerCapture(e.pointerId)});sc.addEventListener('pointermove',e=>{if(!state)return;if(Math.abs(e.clientX-state.x)>3)state.moved=true;if(state.moved)sc.scrollLeft=state.left+state.x-e.clientX});sc.addEventListener('pointerup',()=>state=null);let drag=false;$('ruler').addEventListener('pointerdown',e=>{drag=true;$('ruler').setPointerCapture(e.pointerId);rulerAt(e)});$('ruler').addEventListener('pointermove',e=>{if(drag)rulerAt(e)});$('ruler').addEventListener('pointerup',()=>drag=false);function rulerAt(e){const rect=$('ruler').getBoundingClientRect(),index=Math.max(0,Math.min(dayDiff(viewStart,viewEnd),Math.floor((e.clientX-rect.left)/scale)));selectDate(addDays(viewStart,index),false)}}
+function init(){
+ applyPrefs();localizeStatic();$('zoom-slider').value=scaleToSlider(scale);
+ $('save').onclick=save;$('export-md').onclick=exportMarkdown;$('import').onclick=()=>$('file-input').click();
+ $('file-input').onchange=e=>{askImport([...e.target.files]);e.target.value=''};
+ $('new-project').onclick=()=>confirmAction(tr('新建工作区','New workspace'),tr('当前工作区会从页面中清空。若有未保存修改，请先导出 JSON。','The current workspace will be cleared from this page. Save a JSON backup first if you have unsaved changes.'),()=>mutate(()=>{data=fresh(prefs.language);selection=null;viewDate=today();viewStart=addDays(viewDate,-7);viewEnd=addDays(viewDate,30);scale=52;$('zoom-slider').value=scaleToSlider(scale)}));
+ $('workspace-name').onfocus=()=>editingSnapshot=snapshot();
+ $('workspace-name').oninput=e=>{data.projectName=e.target.value;setDirty();document.title=data.projectName+tr(' · 工作时间轴',' · Work Timeline')};
+ $('workspace-name').onblur=()=>{if(!data.projectName.trim())data.projectName=tr('工作记录','Work Record');flushEdit()};
+ $('add-phase').onclick=()=>showPhaseModal();$('add-task').onclick=showTaskModal;$('settings').onclick=showSettings;$('search').oninput=renderSearch;
+ $('prev-day').onclick=$('journal-prev').onclick=()=>selectDate(addDays(viewDate,-1),true);
+ $('next-day').onclick=$('journal-next').onclick=()=>selectDate(addDays(viewDate,1),true);
+ $('jump-today').onclick=$('journal-today').onclick=()=>selectDate(today(),true);
+ $('journal-date').onchange=$('axis-date').onchange=e=>selectDate(e.target.value,true);
+ $('zoom-slider').oninput=e=>zoomTo(sliderToScale(e.target.value));$('zoom-in').onclick=()=>stepZoom(1);$('zoom-out').onclick=()=>stepZoom(-1);$('set-range').onclick=setViewRange;
+ $('copy-yesterday').onclick=()=>{
+  const previous=getLog(addDays(viewDate,-1)).plans.filter(x=>x.text.trim());if(!previous.length){notify(tr('昨天没有可载入的明日计划','No plan from yesterday to copy'));return}
+  mutate(()=>{const current=ensureLog(viewDate),known=new Set(current.completed.map(x=>x.text));for(const plan of previous)if(!known.has(plan.text)){current.completed.push({id:uid(),text:plan.text,updatedAt:stamp()});known.add(plan.text)}current.updatedAt=stamp()});notify(tr('已载入昨日计划','Copied yesterday’s plan'))
+ };
+ $('journal-toggle').onclick=()=>{prefs.journalCollapsed=!prefs.journalCollapsed;persistPrefs();renderTimeline()};
+ $('detail-toggle').onclick=()=>{prefs.detailsCollapsed=!prefs.detailsCollapsed;persistPrefs();renderTimeline()};
+ $('modal-cover').onclick=e=>{if(e.target===$('modal-cover'))closeModal()};
+ splitter($('split-h'),'x');splitter($('split-v'),'y');setupPan();
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();$('search-results').classList.add('hidden')}if((e.ctrlKey||e.metaKey)&&!e.altKey){const key=e.key.toLowerCase();if(key==='s'){e.preventDefault();save()}else if(key==='f'){e.preventDefault();$('search').focus();$('search').select()}else if(key==='z'){e.preventDefault();e.shiftKey?redo():undo()}else if(key==='y'){e.preventDefault();redo()}}});
+ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+ window.addEventListener('resize',()=>renderTimeline());render();requestAnimationFrame(()=>centerDate(viewDate))
+}
+init();
+})();
+</script>
+</body></html>
