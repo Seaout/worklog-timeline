@@ -1,138 +1,167 @@
-# Work Timeline Tracker
+# 工作记录仪 / Work Timeline Tracker
 
-A single-file, zero-dependency web application for visualizing project timelines and managing tasks. This tool is a standalone `index.html` file that runs in any modern browser, making it perfect for quick, portable project management without any setup.
+[简体中文](#简体中文) · [English](#english)
 
-## Features
+## 简体中文
 
-* **Interactive Timeline:** A drag-and-scroll timeline that displays tasks within colored "Phase" lanes.
+工作记录仪基于 [adtpdn/work-timeline](https://github.com/adtpdn/work-timeline) 修改和扩展。原项目提供了单文件时间轴与任务管理的基础实现；本项目在此基础上重新设计了界面，并加入每日记录、任务拖拽排序、多轨道时间轴、搜索、主题与语言设置、数据导入导出等功能。所有功能都包含在 `index.html` 中，可离线使用，无需安装、注册或连接服务器。
 
-* **Task Management:** Add, edit, and move tasks. Tasks can be assigned a status:
+## 快速开始
 
-  * 🔵 **Ongoing** (Blue)
+1. 用较新的 Chrome 或 Edge 打开 `index.html`。首次打开会显示一个名为「工作记录仪」的空白工作区和「待办」阶段。
 
-  * 🟡 **Halted / Issues** (Yellow)
+2. 点击「＋ 阶段」建立分类，再点击「＋ 任务」填写名称、所属阶段、开始日期和结束日期。
 
-  * 🔴 **Failed** (Red)
+3. 点击时间轴上的任务条，在下方的「任务详情」编辑状态、描述、负责人、链接和子任务。右侧「每日记录」填写当天的内容。
 
-  * 🟢 **Completed** (Dimmed Green)
+4. 编辑结束后点击顶部「保存 JSON」，确认浏览器已经下载文件。下次打开 HTML 时，点击「导入 JSON」选择这份文件继续使用。
 
-* **Task Details:** Click any task to manage its sub-tasks, add a description, assign it to a person, and add an external link (which appears as a 🔗 icon).
+> **任务和日志不会自动保存。** 当前数据只在打开的页面内存中；刷新或关闭页面前，请下载 JSON 备份。主题和分栏尺寸会保存在当前浏览器，但不包含任务与日志。
 
-* **Sub-Task Management:** Each task has its own list of sub-tasks, which also have their own status and description.
+## 时间轴与任务
 
-* **Customizable Phases:** Create "Phase" lanes (e.g., "Design", "Development") and assign them a custom pastel color.
+### 阶段和轨道
 
-* **Data Persistence:** Save your entire project to a `.json` file and load it back in later.
+* 阶段左侧的「⋮⋮」是排序握柄，上下拖动它可调整阶段顺序；点击小色块可更改阶段颜色，点击阶段名称可编辑或删除阶段。
 
-* **Markdown Reports:** Export a `.md` report that lists all **Ongoing** and **Halted** tasks, grouped by assignee and phase, perfect for daily status updates.
+* 日期不重叠的多个任务可以放在同一轨道。将任务拖到其他轨道、轨道之间或另一个阶段，可改变它的位置；出现日期重叠时会自动建立新轨道。没有任务的轨道会自动清理。
 
-* **"Today" Marker:** A red line on the timeline automatically shows the current date (hardcoded to GMT+8).
+* 删除阶段会一并删除其中的任务，页面会先询问确认；删除单个任务也需要确认。
 
-## Usage
+### 拖动任务
 
-1. **Open:** Download the `index.html` file and open it in any modern web browser (Chrome, Firefox, Safari, Edge).
+| 操作         | 结果                   |
+| ---------- | -------------------- |
+| 左右拖动任务条中部  | 起止日期一起移动，任务持续天数不变    |
+| 拖动任务条左端或右端 | 只调整开始日期或结束日期，任务最短为一天 |
+| 上下拖动任务条    | 更换轨道，或拖到另一阶段         |
 
-2. **Add Phases:** Click "Add Phase" to create your project's main lanes (e.g., "Planning", "Testing").
+横向位移超过当前日期宽度的一半，才会跨到相邻一天。拖动时会显示目标日期和阶段，松手后才应用修改。缩放得很小时，仍可在「任务详情」的日期栏精确输入日期。拖动超出当前显示范围时，时间轴会扩展范围以显示任务。
 
-3. **Add Tasks:** Click "Add Task" to create a task. You can assign its name, phase, assignee, link, description, and dates in the modal.
+### 日期与缩放
 
-4. **Edit:** Click any task on the timeline to open the "Task Details" panel. Here you can add sub-tasks or click "Edit Task" (in the top-right controls) to change its details, including moving it to a new phase.
+* 「显示起点」「显示终点」决定当前时间轴窗口；填写后点击「设定范围」。它们是显示设置，不会修改任务日期。
 
-5. **Save/Load:** Use the "Save JSON" button to download your project data. Use "Load JSON" to upload and restore a previously saved project.
+* 拖动「缩放」滑块或点击两侧的加减按钮，可改变每天在时间轴上的宽度。按住 **Alt** 并在时间轴上滚动鼠标滚轮，会以鼠标位置为中心缩放；普通滚轮仍用于滚动。
 
-6. **Export Report:** Click "Export Report" to download a `Task Status - DD - MM - YYYY.md` file with a summary of all active tasks.
+* 点击或拖动顶部日期尺可选择查看日期；也可使用「查看日期」、前后一天按钮或「今天」。选中日期会以亮色方块和竖线标示，周一会加粗并有周起始线。
 
-## Customization
+* 在时间轴空白处按住鼠标拖动，可横向浏览。右侧日志的日期与时间轴当前查看日期对应。
 
-Since this is a single-file application, all customization happens within `index.html`.
+## 每日记录
 
-### 1. Default Data
+右侧按「今日完成」「遇到的问题」「明日计划」「备注」记录内容。前三组可以逐条添加，条目自动编号；在条目末尾按 **Enter** 新增下一条，按 **Shift+Enter** 在当前条内换行，空条目按 **Backspace** 可删除。点击「载入昨日计划 → 今日完成」会把昨天非空的计划复制到今天的完成列表，并跳过今天已有的相同文本；昨天的记录不会被改动。
 
-The application loads with dummy data. To start with a blank project, find the `timelineData` variable in the `<script>` tag and change it to a blank array or a default "To Do" phase:
+「当日相关任务」显示起止日期覆盖当天的任务，点击可跳转到任务详情。它不会自动把任务内容写入日志。
 
-```javascript
-// Before
-let timelineData = [
-    { id: 1, phaseName: "Design", color: "#8c9e83", tasks: [...] },
-    // ... more data
-];
+## 搜索与界面设置
 
-// After (for a blank project)
-let timelineData = [];
+顶部搜索框可查找阶段、任务名称和描述、子任务，以及日志条目和备注；点击结果可跳到对应任务或日期。底部和侧边的分隔条可调整任务详情与日志的大小，双击分隔条恢复默认尺寸，两栏也可以分别收起。
 
-// Or, for a default setup
-let timelineData = [
-    { id: Date.now(), phaseName: "To Do", color: "#757575", tasks: [] }
-];
-```
+在「设置」中可以选择简体中文或 English，也可以选暗色、浅色或柔和主题，并分别调整界面颜色、「保存 JSON」和「添加任务」按钮颜色。切换语言会同步切换界面、弹窗和导出 Markdown 的栏目标题；你自己输入的任务名与日志正文不会被自动翻译。语言、外观与分栏尺寸保存在当前浏览器的本地设置中，不随 JSON 在设备之间同步。
 
-### 2. Colors
+## 保存、导入和导出
 
-* **Phase Colors:** The available pastel colors for phases are defined in the `phaseColorPalette` object. You can add, remove, or change these hex codes.
+| 功能                | 用途                                        |
+| ----------------- | ----------------------------------------- |
+| 保存 JSON           | 下载完整工作区数据，包含阶段顺序、轨道、任务、子任务和每日记录；后续可导入继续编辑 |
+| 导入 JSON → 替换当前数据  | 用所选备份覆盖页面中当前工作区；操作前先保存当前内容                |
+| 导入 JSON → 合并到当前数据 | 将其他备份合进当前工作区；可一次选择多个 JSON                 |
+| 导出 Markdown       | 生成适合阅读的任务与日志文本，不能作为可恢复的完整备份               |
 
-    ```javascript
-    const phaseColorPalette = {
-        '#757575': 'Default Grey',
-        '#8c9e83': 'Sage',
-        '#a1c6e1': 'Sky',
-        // ... add your own hex codes and names
-    };
-    ```
+合并时，同 ID 的内容采用更新时间较新的版本，不同 ID 的内容会加入；阶段顺序采用较新的排序记录。同一天的日志条目会汇合，完全相同的新增文本会跳过。同轨道出现任务日期重叠时会自动分开。旧版 JSON 可以导入，缺少轨道信息的任务会自动分配轨道。合并完成后，记得重新保存一份完整 JSON。
 
-* **Task Status Colors:** The colors for task statuses (Ongoing, Halted, etc.) are defined in the CSS `<style>` tag at the top of the file. You can change the hex codes in the `:root` section.
+「任务详情」中的「保存修改」只表示页面内的修改已经应用；要保留到下次打开，仍需点击顶部「保存 JSON」。页面显示「有未保存修改」时，应先下载备份再关闭。即使页面显示已保存，也请确认浏览器确实完成了下载。
 
-    ```css
-    :root {
-        --primary-color: #4fc3f7; /* Ongoing */
-        --accent-green: #81c784; /* Completed */
-        --accent-orange: #ffb74d; /* Halted */
-        --accent-red: #e57373; /* Failed / Today */
-    }
-    ```
+## 快捷键
 
-### 3. Timezone
+| 快捷键                              | 操作        |
+| -------------------------------- | --------- |
+| Ctrl+S（macOS：⌘S）                 | 下载完整 JSON |
+| Ctrl+F（macOS：⌘F）                 | 聚焦应用内搜索框  |
+| Ctrl+Z（macOS：⌘Z）                 | 撤销最近的内容修改 |
+| Ctrl+Shift+Z 或 Ctrl+Y（macOS：⌘⇧Z） | 重做        |
 
-The "Today" marker is hardcoded to `Asia/Singapore` (GMT+8). To change this, find the `getTodayGmt8` function and change the `timeZone` property to your desired IANA timezone.
+「新建」会清空当前页面的工作区，开始前请先保存已有内容。日期按钮中的「今天」按中国标准时间计算；时间轴范围、缩放、选中日期和分栏尺寸不会写入工作区 JSON。
 
-```javascript
+## English
 
-function getTodayGmt8() {
-    // ...
-    const options = {
-        timeZone: 'Asia/Singapore', // <-- Change this
-        // ...
-    };
-    // ...
-}
-```
+Work Timeline Tracker is based on [adtpdn/work-timeline](https://github.com/adtpdn/work-timeline). The original project provides a single-file timeline and basic task management. This version redesigns the interface and adds a daily journal, drag-and-drop task ordering, multiple timeline lanes, search, theme and language settings, and data import and export. Everything runs offline from `index.html`; no installation, account, or server is required.
 
-## Extending the Functionality
+### Quick start
 
-All application logic is contained within the `<script>` tag. The app follows a simple data-driven pattern.
+1. Open `index.html` in a recent version of Chrome or Edge. A new workspace starts with one “To Do” phase. If the page opens in Chinese, go to **Settings → Interface language → English**.
 
-**To add a new property (e.g., "Priority" for Tasks):**
+2. Select **＋ Phase** to create a group, then **＋ Task** to enter its name, phase, start date, and end date.
 
-1. **Update Data Model:** Go to `handleAddTaskSubmit` and add the new field to the `newTask` object.
+3. Select a task bar to edit its status, description, assignee, link, and subtasks in **Task details**. Write entries for the selected date in the **Daily journal**.
 
-    ```javascript
-    const newTask = {
-        id: Date.now(),
-        name: document.getElementById('modal-task-name').value,
-        priority: document.getElementById('modal-task-priority').value, // <-- New
-        // ... other properties
-    };
-    ```
-2. **Update Modals:**
+4. Select **Save JSON** and confirm that your browser downloaded the file. Next time, open the HTML and choose **Import JSON** to continue.
 
-    * Add the new input field (e.g., a `<select>` for priority) to the HTML string in `showAddTaskModal`.
+> **Tasks and journal entries are not saved automatically.** They exist only in the open page until you download a JSON backup. Refreshing or closing the page can lose unsaved changes. The browser remembers appearance and layout preferences, but not your task or journal data.
 
-    * Add the same field to `showEditTaskModal`, making sure to set its value from the `task` object (e.g., `value="${task.priority || 'low'}"`).
+### Timeline and tasks
 
-3. **Save Changes:** In `handleSaveTaskChanges`, find the task and update the new property from the modal's input.
-    ```javascript
-    task.priority = document.getElementById('modal-edit-priority').value; // <-- New
-    ```
+#### Phases and lanes
 
-4. **Display Data:** If you want to show the priority, you can modify `createTaskClipElement` to add an icon, or `renderTaskDetails` to show it in the details panel.
+* Drag the “⋮⋮” handle to reorder phases. Select the small square to change a phase’s color, or its name to edit or delete the phase.
 
-5. **Render:** The `handleSaveTaskChanges` and `handleAddTaskSubmit` functions already call `renderAll()`, which will re-draw the timeline with your new data.
+* Tasks with nonoverlapping dates can share a lane. Drag a task onto another lane, between lanes, or into another phase to move it. A new lane is created when dates would overlap; empty lanes are removed automatically.
+
+* Deleting a phase also deletes its tasks. The page asks for confirmation before deleting a phase or task.
+
+#### Dragging tasks
+
+| Action                                  | Result                                                           |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| Drag the center of a task left or right | Move its start and end together without changing its duration    |
+| Drag the left or right edge             | Change just the start or end date; a task lasts at least one day |
+| Drag a task up or down                  | Change its lane or phase                                         |
+
+A horizontal drag crosses into the next day only after moving more than half the current day width. The proposed dates and phase appear while dragging; changes apply when you release the pointer. At a very small zoom level, use the date fields in **Task details** for precise edits. If a task moves outside the visible date range, the range expands to show it.
+
+#### Dates and zoom
+
+* **Start** and **End** beside **＋ Task** set the visible timeline range. Enter both dates and select **Set range**. This changes the view, not task dates.
+
+* Use the **Zoom** slider or its plus and minus buttons to change the width of each day. Hold **Alt** while scrolling over the timeline to zoom around the pointer; ordinary scrolling still scrolls.
+
+* Select or drag along the date ruler to choose the journal date. You can also use **View date**, the previous/next day controls, or **Today**. The selected day has a highlighted label and vertical line; Mondays are bold with a week-start line.
+
+* Drag an empty area of the timeline to scroll horizontally. The journal on the right follows the currently selected date.
+
+### Daily journal
+
+The journal has **Completed today**, **Issues encountered**, **Tomorrow’s plan**, and **Notes**. The first three sections contain numbered entries. Press **Enter** to add an entry, **Shift+Enter** for a line break in the current entry, or **Backspace** in an empty entry to remove it. **Copy yesterday’s plan → completed today** copies nonempty plan entries without duplicating identical text or changing yesterday’s entries.
+
+**Tasks on this day** lists tasks whose date ranges include the selected date. Selecting one opens its details; tasks are not automatically copied into journal text.
+
+### Search, appearance, and language
+
+Search the phase and task names, descriptions, subtasks, journal entries, and notes from the top bar. Select a result to open its task or date. Drag the horizontal and vertical dividers to resize the details and journal panels; double-click a divider to restore its default size. Either panel can be collapsed.
+
+Under **Settings**, choose **简体中文** or **English** and select a Dark, Light, or Soft theme. You can also customize interface colors and the **Save JSON** and **Add task** button colors. The language choice changes the interface, dialogs, and headings and status labels in exported Markdown. Text that you typed yourself, including task names and journal entries, remains unchanged. Language, appearance, and panel sizes are stored in this browser and are not included in the JSON backup.
+
+### Save, import, and export
+
+| Action                                | Purpose                                                                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Save JSON                             | Download the complete workspace, including phase order, lanes, tasks, subtasks, and journal entries; import it to resume editing |
+| Import JSON → Replace current data    | Replace the workspace currently open in the page; save it first if needed                                                        |
+| Import JSON → Merge into current data | Combine backups with the current workspace; you can select multiple JSON files                                                   |
+| Export Markdown                       | Download a readable task and journal document in the current interface language; it is not a restorable backup                   |
+
+When merging, matching IDs use the more recently updated content and new IDs are added. The newer phase ordering is used; journal entries for the same date are combined, and identical new text is skipped. If merged tasks overlap in one lane, they are moved apart automatically. Older JSON backups are accepted; tasks without lane information are assigned lanes. Save a new complete JSON backup after a merge.
+
+**Apply changes** in Task details only applies edits to the current page. You still need **Save JSON** to keep them for the next session. If the page shows **Unsaved changes**, download a backup before closing. Confirm that the browser finished the download even if the page displays “Saved.”
+
+### Keyboard shortcuts
+
+| Shortcut                            | Action                         |
+| ----------------------------------- | ------------------------------ |
+| Ctrl+S (macOS: ⌘S)                  | Download the complete JSON     |
+| Ctrl+F (macOS: ⌘F)                  | Focus the app’s search box     |
+| Ctrl+Z (macOS: ⌘Z)                  | Undo the latest content change |
+| Ctrl+Shift+Z or Ctrl+Y (macOS: ⌘⇧Z) | Redo                           |
+
+**New** clears the current workspace from the page, so save existing work first. **Today** uses China Standard Time. The visible date range, zoom, selected journal date, interface language, and panel sizes are not saved in the workspace JSON.
