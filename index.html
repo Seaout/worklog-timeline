@@ -61,7 +61,16 @@ input:-webkit-autofill{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 
 <header class="toolbar">
 <input id="workspace-name" aria-label="工作区名称" value="研究生工作记录" title="工作区名称"><span class="build-badge">修订版 09·26 v4</span>
 <button id="new-project" class="quiet">新建</button><button id="save" class="primary" title="Ctrl+S">保存 JSON</button><button id="import">导入 JSON</button><button id="export-md" class="quiet">导出 Markdown</button><input id="file-input" type="file" accept=".json,application/json" multiple class="hidden">
-<span class="grow"></span><input class="search-field" id="search" placeholder="搜索任务、每日记录…" aria-label="全局搜索" title="Ctrl+F"><button id="settings" title="主题与颜色">设置</button><span id="save-status" class="status">尚未保存</span>
+<span class="grow"></span>
+<a id="project-info"
+   class="toolbar-link"
+   href="https://github.com/Seaout/worklog-timeline"
+   target="_blank"
+   rel="noopener noreferrer"
+   title="查看项目说明">说明</a>
+<input class="search-field" id="search" placeholder="搜索任务、每日记录…" aria-label="全局搜索" title="Ctrl+F">
+<button id="settings" title="主题与颜色">设置</button>
+<span id="save-status" class="status">尚未保存</span>
 </header>
 <div class="workspace" id="workspace">
 <div class="left" id="left">
@@ -97,7 +106,8 @@ function localizeStatic(){
  document.documentElement.lang=prefs.language==='en'?'en':'zh-CN';
  const labels=[
   ['.build-badge','textContent','修订版 09·26 v4','Revision 09·26 v4'],
-  ['#new-project','textContent','新建','New'],['#save','textContent','保存 JSON','Save JSON'],['#import','textContent','导入 JSON','Import JSON'],['#export-md','textContent','导出 Markdown','Export Markdown'],
+  ['#new-project','textContent','新建','New'],['#save','textContent','保存 JSON','Save JSON'],['#import','textContent','导入 JSON','Import JSON'],['#export-md','textContent','导出 Markdown','Export Markdown'],['#project-info','textContent','说明','About'],
+['#project-info','title','查看项目说明','View project information'],
   ['#settings','textContent','设置','Settings'],['#settings','title','主题与颜色','Theme, colors and language'],
   ['#search','placeholder','搜索任务、每日记录…','Search tasks and daily entries…'],['#search','aria-label','全局搜索','Search all content'],
   ['#add-phase','textContent','＋ 阶段','＋ Phase'],['#add-task','textContent','＋ 任务','＋ Task'],
