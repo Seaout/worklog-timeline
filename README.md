@@ -2,6 +2,8 @@
 
 [简体中文](#简体中文) · [English](#english)
 
+🌐 **[在线使用 / Live Demo](https://seaout.github.io/worklog-timeline/)**
+
 ## 简体中文
 
 工作记录仪基于 [adtpdn/work-timeline](https://github.com/adtpdn/work-timeline) 修改和扩展。原项目提供了单文件时间轴与任务管理的基础实现；本项目在此基础上重新设计了界面，并加入每日记录、任务拖拽排序、多轨道时间轴、搜索、主题与语言设置、数据导入导出等功能。所有功能都包含在 `工作记录仪.html` 中，可离线使用，无需安装、注册或连接服务器。
