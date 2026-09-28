@@ -53,13 +53,60 @@ input:-webkit-autofill{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 
 .lane-drop{position:absolute;left:2px;right:2px;height:31px;border:2px dashed var(--cursor);border-radius:6px;pointer-events:none;z-index:5;background:color-mix(in srgb,var(--cursor) 17%,transparent)}
 .lane-drop.new{height:10px;background:var(--cursor)}
 .phase-drop{outline:2px dashed var(--cursor);outline-offset:-3px}
+.ruler{cursor:grab;user-select:none;-webkit-user-select:none}
+.ruler:active{cursor:grabbing}
+.ruler *{user-select:none;-webkit-user-select:none}
+.related-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.related-head button{padding:2px 8px}
+.related.collapsed{display:none}
+.display-scale{display:flex;align-items:center;gap:9px;margin:9px 0}
+.display-scale label{min-width:70px}.display-scale input{flex:1;padding:0}.display-scale output{min-width:40px;text-align:right}
+body{font-size:calc(14px * var(--font-scale,1))}
+button{padding:calc(7px * var(--ui-scale,1)) calc(11px * var(--ui-scale,1));border-radius:calc(7px * var(--ui-scale,1))}
+input,textarea,select{padding:calc(8px * var(--ui-scale,1));border-radius:calc(7px * var(--ui-scale,1))}
+.toolbar{gap:calc(8px * var(--ui-scale,1));padding:calc(10px * var(--ui-scale,1)) calc(14px * var(--ui-scale,1))}
+.toolbar #workspace-name{width:calc(166px * var(--ui-scale,1))}
+.toolbar .search-field{width:calc(225px * var(--ui-scale,1))}
+.timeline-actions{gap:calc(7px * var(--ui-scale,1));padding:calc(9px * var(--ui-scale,1)) calc(12px * var(--ui-scale,1))}
+.timeline-actions input[type=date]{width:calc(147px * var(--ui-scale,1))}
+.details{padding:calc(12px * var(--ui-scale,1)) calc(15px * var(--ui-scale,1))}
+.details-grid{gap:calc(16px * var(--ui-scale,1));margin-top:calc(12px * var(--ui-scale,1))}
+.task-fields{gap:calc(9px * var(--ui-scale,1))}
+.field{gap:calc(4px * var(--ui-scale,1))}
+.field textarea{min-height:calc(90px * var(--ui-scale,1))}
+.sub-item{gap:calc(7px * var(--ui-scale,1));margin-bottom:calc(7px * var(--ui-scale,1))}
+.details-footer{gap:calc(8px * var(--ui-scale,1));margin-top:calc(13px * var(--ui-scale,1))}
+.journal{padding:calc(14px * var(--ui-scale,1))}
+.journal-date{gap:calc(5px * var(--ui-scale,1));margin:calc(13px * var(--ui-scale,1)) 0}
+.related{gap:calc(5px * var(--ui-scale,1));margin-bottom:calc(14px * var(--ui-scale,1))}
+.related button{padding:calc(4px * var(--ui-scale,1)) calc(7px * var(--ui-scale,1))}
+.log-block{margin:calc(13px * var(--ui-scale,1)) 0}
+.log-block>button{margin:calc(7px * var(--ui-scale,1)) 0 0 calc(26px * var(--ui-scale,1))}
+.entries{gap:calc(6px * var(--ui-scale,1))}
+.entry{gap:calc(6px * var(--ui-scale,1))}
+.entry textarea{min-height:calc(39px * var(--ui-scale,1))}
+.sub-item button{padding:calc(5px * var(--ui-scale,1)) calc(8px * var(--ui-scale,1))}
+.notes{min-height:calc(110px * var(--ui-scale,1))}
+.details-head h2,.journal-head h2{font-size:calc(16px * var(--font-scale,1))}
+.details-col h3,.log-block h3{font-size:calc(14px * var(--font-scale,1))}
+.small,.field label,.status{font-size:calc(12px * var(--font-scale,1))}
+.day-tick{font-size:calc(11px * var(--font-scale,1))}
+.drag-caption{font-size:calc(12px * var(--font-scale,1))}
+.task-bar{height:max(28px,calc(32px * var(--font-scale,1) - 4px))}
+.modal{padding:calc(18px * var(--ui-scale,1))}
+.modal h2{font-size:calc(18px * var(--font-scale,1))}
+.modal-actions{gap:calc(8px * var(--ui-scale,1));margin-top:calc(15px * var(--ui-scale,1))}
+.settings-grid{gap:calc(8px * var(--ui-scale,1))}
+.color-field input{width:calc(66px * var(--ui-scale,1));height:calc(38px * var(--ui-scale,1))}
+.result-panel{padding:calc(12px * var(--ui-scale,1))}
+@media(max-width:700px){.toolbar{gap:calc(5px * var(--ui-scale,1))}.toolbar .search-field{width:calc(150px * var(--ui-scale,1))}.timeline-actions{gap:calc(4px * var(--ui-scale,1))}}
 @media(max-width:700px){.range-controls{border-left:0;padding-left:0}.range-controls input[type=date]{width:123px}}
 </style>
 </head>
 <body>
 <div class="app">
 <header class="toolbar">
-<input id="workspace-name" aria-label="工作区名称" value="研究生工作记录" title="工作区名称"><span class="build-badge">修订版 09·26 v4</span>
+<input id="workspace-name" aria-label="工作区名称" value="研究生工作记录" title="工作区名称"><span class="build-badge">修订版 09·28 v4</span>
 <button id="new-project" class="quiet">新建</button><button id="save" class="primary" title="Ctrl+S">保存 JSON</button><button id="import">导入 JSON</button><button id="export-md" class="quiet">导出 Markdown</button><input id="file-input" type="file" accept=".json,application/json" multiple class="hidden">
 <span class="grow"></span>
 <a id="project-info"
@@ -80,7 +127,7 @@ input:-webkit-autofill{-webkit-text-fill-color:var(--text);-webkit-box-shadow:0 
 </section><div id="split-v" class="split-v" role="separator" aria-label="调整任务详情高度" tabindex="0"></div>
 <section class="details" id="details"><div class="details-head"><h2>任务详情</h2><span id="detail-hint" class="small muted">选中时间轴上的任务</span><span class="grow"></span><button id="detail-toggle" class="quiet" title="收起或展开">收起</button></div><div id="detail-content"></div></section>
 </div><div id="split-h" class="split-h" role="separator" aria-label="调整每日日志宽度" tabindex="0"></div>
-<aside class="journal" id="journal"><div class="journal-head"><h2>每日记录</h2><span class="grow"></span><button id="journal-toggle" class="quiet" title="收起或展开">收起</button></div><div class="journal-date"><button id="journal-prev" title="前一天">‹</button><input type="date" id="journal-date" aria-label="记录日期"><button id="journal-today">今天</button><button id="journal-next" title="后一天">›</button></div><div class="small muted">当日相关任务</div><div class="related" id="related"></div><button id="copy-yesterday" class="quiet">载入昨日计划 → 今日完成</button><div id="log-fields"></div></aside>
+<aside class="journal" id="journal"><div class="journal-head"><h2>每日记录</h2><span class="grow"></span><button id="journal-toggle" class="quiet" title="收起或展开">收起</button></div><div class="journal-date"><button id="journal-prev" title="前一天">‹</button><input type="date" id="journal-date" aria-label="记录日期"><button id="journal-today">今天</button><button id="journal-next" title="后一天">›</button></div><div class="related-head"><span class="small muted" id="related-title">当日相关任务</span><button id="related-toggle" class="quiet" type="button" aria-controls="related" aria-expanded="true" title="收起当日相关任务">⌃</button></div><div class="related" id="related"></div><button id="copy-yesterday" class="quiet">载入昨日计划 → 今日完成</button><div id="log-fields"></div></aside>
 </div></div>
 <div id="search-results" class="result-panel hidden"></div><div id="modal-cover" class="modal-cover hidden"><div id="modal" class="modal"></div></div><div id="toast" class="toast hidden" role="status"></div>
 <script>
@@ -92,13 +139,16 @@ const dayDiff=(a,b)=>Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const stamp=()=>new Date().toISOString();const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statuses={ongoing:'进行中',halted:'暂停·有问题',failed:'未完成',completed:'已完成'};
-const fresh=(language='zh')=>({version:3,projectName:language==='en'?'Work Record':'工作记录仪',phaseOrderUpdatedAt:'',timelineData:[{id:uid(),phaseName:language==='en'?'To Do':'待办',color:'#879cad',lanes:[],tasks:[],updatedAt:stamp()}],dailyLogs:{}});
-let data=fresh(),selection=null,viewDate=today(),viewStart=addDays(today(),-7),viewEnd=addDays(today(),30),scale=52,dirty=false,undoStack=[],redoStack=[],editingSnapshot=null,lastSaved=null,filter='全部';
+const defaultView=()=>({start:addDays(today(),-7),end:addDays(today(),30),date:today(),scale:52});
+const fresh=(language='zh')=>({version:5,projectName:language==='en'?'Work Record':'工作记录仪',phaseOrderUpdatedAt:'',timelineData:[{id:uid(),phaseName:language==='en'?'To Do':'待办',color:'#879cad',lanes:[],tasks:[],updatedAt:stamp()}],dailyLogs:{},viewState:defaultView()});
+let data=fresh(),selection=null,viewDate=data.viewState.date,viewStart=data.viewState.start,viewEnd=data.viewState.end,scale=data.viewState.scale,dirty=false,undoStack=[],redoStack=[],editingSnapshot=null,lastSaved=null,filter='全部',copiedTask=null;
 const uiKey='work-timeline-ui-v2';const themeNames=['背景','面板','主文字','次级文字','网格线','月份分隔线','今日线','日期游标','进行中','有问题','未完成','已完成'];const vars=['--bg','--panel','--text','--muted','--grid','--month','--today','--cursor','--ongoing','--halted','--failed','--completed'];
 const themes={暗色:['#171c27','#222a38','#edf2f8','#a6b3c4','#384456','#7392b3','#f48080','#7fd5e5','#69b9ee','#f0b66c','#d77993','#8cc9a3'],浅色:['#f2f4f8','#ffffff','#253347','#617184','#d9e1ea','#a5b7cd','#df6669','#389bb6','#5b9fd7','#d69545','#d17189','#60ad7d'],柔和:['#f7f3ed','#fffaf4','#493e43','#877a7b','#e3d5ce','#c0a7ad','#cd7571','#6b9d9c','#78a9bb','#d5a46f','#bf8297','#80a88d']};
 const buttonThemes={暗色:{save:'#7fd5e5',task:'#8cc9a3'},浅色:{save:'#389bb6',task:'#5b9fd7'},柔和:{save:'#6b9d9c',task:'#80a88d'}};
-let prefs={theme:'暗色',language:'zh',colors:themes['暗色'].slice(),saveColor:buttonThemes['暗色'].save,taskColor:buttonThemes['暗色'].task,journalWidth:30,detailsHeight:35,journalCollapsed:false,detailsCollapsed:false};let storedPrefs={};try{storedPrefs=JSON.parse(localStorage.getItem(uiKey)||'{}')||{};Object.assign(prefs,storedPrefs)}catch{}
+let prefs={theme:'暗色',language:'zh',colors:themes['暗色'].slice(),saveColor:buttonThemes['暗色'].save,taskColor:buttonThemes['暗色'].task,journalWidth:30,detailsHeight:35,journalCollapsed:false,detailsCollapsed:false,relatedCollapsed:false,lastTaskPhaseId:null,uiScale:100,fontScale:100};let storedPrefs={};try{storedPrefs=JSON.parse(localStorage.getItem(uiKey)||'{}')||{};Object.assign(prefs,storedPrefs)}catch{}
 if(!['zh','en'].includes(prefs.language))prefs.language='zh';
+if(!Number.isInteger(prefs.uiScale)||prefs.uiScale<75||prefs.uiScale>125||prefs.uiScale%5)prefs.uiScale=100;
+if(!Number.isInteger(prefs.fontScale)||prefs.fontScale<80||prefs.fontScale>140||prefs.fontScale%5)prefs.fontScale=100;
 function tr(zh,en){return prefs.language==='en'?en:zh}
 function statusLabel(key){return prefs.language==='en'?({ongoing:'In progress',halted:'Paused · issue',failed:'Incomplete',completed:'Completed'}[key]||key):(statuses[key]||key)}
 function logLabel(key){return tr(({completed:'今日完成',issues:'遇到的问题',plans:'明日计划',notes:'备注'})[key],({completed:'Completed today',issues:'Issues encountered',plans:'Tomorrow’s plan',notes:'Notes'})[key])}
@@ -120,29 +170,32 @@ function localizeStatic(){
   ['.details-head h2','textContent','任务详情','Task details'],['#detail-toggle','title','收起或展开','Collapse or expand'],
   ['.journal-head h2','textContent','每日记录','Daily journal'],['#journal-toggle','title','收起或展开','Collapse or expand'],
   ['#journal-prev','title','前一天','Previous day'],['#journal-next','title','后一天','Next day'],['#journal-today','textContent','今天','Today'],
-  ['#journal-date','aria-label','记录日期','Journal date'],['.journal-date + .small','textContent','当日相关任务','Tasks on this day'],
+  ['#journal-date','aria-label','记录日期','Journal date'],['#related-title','textContent','当日相关任务','Tasks on this day'],
   ['#copy-yesterday','textContent','载入昨日计划 → 今日完成','Copy yesterday’s plan → completed today']
  ];
  for(const [selector,prop,zh,en] of labels){const el=document.querySelector(selector);if(!el)continue;if(prop==='textContent'||prop==='placeholder'||prop==='title')el[prop]=tr(zh,en);else el.setAttribute(prop,tr(zh,en))}
  $('workspace-name').setAttribute('aria-label',tr('工作区名称','Workspace name'));
  $('workspace-name').title=tr('工作区名称','Workspace name');
  $('zoom-slider').title=tr(`时间轴缩放 ${Math.round(scale)} 像素/天`,`Timeline zoom: ${Math.round(scale)} px/day`);
+ updateRelatedCollapse();
  setDirty(dirty);
 }
 if(!Object.hasOwn(storedPrefs,'saveColor')||!/^#[0-9a-f]{6}$/i.test(prefs.saveColor||''))prefs.saveColor=(buttonThemes[prefs.theme]||buttonThemes['暗色']).save;
 if(!Object.hasOwn(storedPrefs,'taskColor')||!/^#[0-9a-f]{6}$/i.test(prefs.taskColor||''))prefs.taskColor=(buttonThemes[prefs.theme]||buttonThemes['暗色']).task;
 function buttonText(color){const channels=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722>.179?'#14202b':'#ffffff'}
-function applyPrefs(){vars.forEach((v,i)=>document.documentElement.style.setProperty(v,prefs.colors[i]||themes['暗色'][i]));const panel=prefs.colors[1]||themes['暗色'][1],rgb=[1,3,5].map(i=>parseInt(panel.slice(i,i+2),16));document.documentElement.style.colorScheme=rgb.reduce((a,b)=>a+b,0)>450?'light':'dark';for(const [name,color] of [['save',prefs.saveColor],['task',prefs.taskColor]]){document.documentElement.style.setProperty('--'+name+'-color',color);document.documentElement.style.setProperty('--'+name+'-text',buttonText(color))}$('journal').style.width=prefs.journalWidth+'%';$('details').style.height=prefs.detailsHeight+'%';$('journal').classList.toggle('collapsed',!!prefs.journalCollapsed);$('details').classList.toggle('collapsed',!!prefs.detailsCollapsed);$('journal-toggle').textContent=prefs.journalCollapsed?tr('日志','Journal'):tr('收起','Collapse');$('detail-toggle').textContent=prefs.detailsCollapsed?tr('展开','Expand'):tr('收起','Collapse');}
+function updateRelatedCollapse(){const collapsed=!!prefs.relatedCollapsed;$('related').classList.toggle('collapsed',collapsed);$('related-toggle').textContent=collapsed?'⌄':'⌃';$('related-toggle').setAttribute('aria-expanded',String(!collapsed));$('related-toggle').title=collapsed?tr('展开当日相关任务','Expand tasks on this day'):tr('收起当日相关任务','Collapse tasks on this day');$('related-toggle').setAttribute('aria-label',$('related-toggle').title)}
+function applyPrefs(){vars.forEach((v,i)=>document.documentElement.style.setProperty(v,prefs.colors[i]||themes['暗色'][i]));document.documentElement.style.setProperty('--ui-scale',String(prefs.uiScale/100));document.documentElement.style.setProperty('--font-scale',String(prefs.fontScale/100));const panel=prefs.colors[1]||themes['暗色'][1],rgb=[1,3,5].map(i=>parseInt(panel.slice(i,i+2),16));document.documentElement.style.colorScheme=rgb.reduce((a,b)=>a+b,0)>450?'light':'dark';for(const [name,color] of [['save',prefs.saveColor],['task',prefs.taskColor]]){document.documentElement.style.setProperty('--'+name+'-color',color);document.documentElement.style.setProperty('--'+name+'-text',buttonText(color))}$('journal').style.width=prefs.journalWidth+'%';$('details').style.height=prefs.detailsHeight+'%';$('journal').classList.toggle('collapsed',!!prefs.journalCollapsed);$('details').classList.toggle('collapsed',!!prefs.detailsCollapsed);$('journal-toggle').textContent=prefs.journalCollapsed?tr('日志','Journal'):tr('收起','Collapse');$('detail-toggle').textContent=prefs.detailsCollapsed?tr('展开','Expand'):tr('收起','Collapse');updateRelatedCollapse()}
 function persistPrefs(){try{localStorage.setItem(uiKey,JSON.stringify(prefs))}catch{}applyPrefs()}
 function notify(msg){const el=$('toast');el.textContent=msg;el.classList.remove('hidden');clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.add('hidden'),3000)}
 function setDirty(value=true){dirty=value;$('save-status').textContent=value?tr('● 有未保存修改','● Unsaved changes'):lastSaved?tr(`✓ 已保存 ${lastSaved}`,`✓ Saved ${lastSaved}`):tr('尚未保存','Not saved yet');$('save-status').classList.toggle('dirty',value)}
 function snapshot(){return clone(data)}function commit(before){reconcileAllLanes();if(JSON.stringify(before)===JSON.stringify(data))return;undoStack.push(before);if(undoStack.length>100)undoStack.shift();redoStack=[];setDirty();render();}
 function mutate(fn){const before=snapshot();fn();commit(before)}
 function flushEdit(){if(editingSnapshot){const before=editingSnapshot;editingSnapshot=null;commit(before)}}
-function undo(){flushEdit();if(!undoStack.length)return;redoStack.push(snapshot());data=undoStack.pop();setDirty();render()}
-function redo(){flushEdit();if(!redoStack.length)return;undoStack.push(snapshot());data=redoStack.pop();setDirty();render()}
+function undo(){flushEdit();if(!undoStack.length)return;redoStack.push(snapshot());data=undoStack.pop();restoreView();setDirty();render()}
+function redo(){flushEdit();if(!redoStack.length)return;undoStack.push(snapshot());data=redoStack.pop();restoreView();setDirty();render()}
 function taskById(id){for(const p of data.timelineData){const t=p.tasks.find(t=>String(t.id)===String(id));if(t)return{p,t}}return null}
 function canShareLane(phase,laneId,task,start,end){return !phase.tasks.some(other=>other!==task&&other.laneId===laneId&&other.startTime<=end&&other.endTime>=start)}
+function lanePitch(){return Math.max(35,Math.ceil(32*prefs.fontScale/100-4)+7)}
 function reconcileLanes(phase){
  const lanes=Array.isArray(phase.lanes)?phase.lanes.filter((id,i,a)=>typeof id==='string'&&id&&a.indexOf(id)===i):[];
  const occupied=new Map(lanes.map(id=>[id,[]]));
@@ -156,16 +209,22 @@ function reconcileLanes(phase){
  phase.lanes=lanes.filter(id=>phase.tasks.some(task=>task.laneId===id));
 }
 function reconcileAllLanes(){for(const phase of data.timelineData)reconcileLanes(phase)}
+function syncView(){const next={start:viewStart,end:viewEnd,date:viewDate,scale};if(JSON.stringify(data.viewState)!==JSON.stringify(next)){data.viewState=next;setDirty()}}
+function restoreView(){const v=data.viewState||defaultView();viewStart=v.start;viewEnd=v.end;viewDate=v.date;scale=v.scale;$('zoom-slider').value=scaleToSlider(scale)}
 function ensureRange(date){
  if(date>=viewStart&&date<=viewEnd)return;
  const span=Math.max(1,dayDiff(viewStart,viewEnd));
  viewStart=addDays(date,-Math.floor(span/2));
  viewEnd=addDays(viewStart,span);
+ syncView();
 }
 function centerDate(date){ensureRange(date);renderTimeline();const sc=$('timeline-scroll');const corner=window.innerWidth<700?116:158;sc.scrollLeft=Math.max(0,dayDiff(viewStart,date)*scale+corner-(sc.clientWidth-corner)/2)}
-function selectDate(date,center=false){if(!validDate(date))return;flushEdit();viewDate=date;ensureRange(date);renderTimeline();renderJournal();if(center)centerDate(date)}
+function selectDate(date,center=false){if(!validDate(date))return;flushEdit();viewDate=date;ensureRange(date);syncView();renderTimeline();renderJournal();if(center)centerDate(date)}
 function allDates(){let dates=[];for(const p of data.timelineData)for(const t of p.tasks){if(validDate(t.startTime))dates.push(t.startTime);if(validDate(t.endTime))dates.push(t.endTime)}for(const d of Object.keys(data.dailyLogs))if(validDate(d))dates.push(d);return dates.sort()}
 const MIN_SCALE=2,MAX_SCALE=160;
+function datesIn(project){const dates=[];for(const p of project.timelineData)for(const t of p.tasks){if(validDate(t.startTime))dates.push(t.startTime);if(validDate(t.endTime))dates.push(t.endTime)}for(const d of Object.keys(project.dailyLogs))if(validDate(d))dates.push(d);return dates}
+function validView(v){return v&&validDate(v.start)&&validDate(v.end)&&validDate(v.date)&&v.start<=v.end&&typeof v.scale==='number'&&Number.isFinite(v.scale)&&v.scale>=MIN_SCALE&&v.scale<=MAX_SCALE}
+function inferredView(project){const dates=datesIn(project).sort(),base=defaultView();return dates.length?{start:dates[0],end:dates.at(-1),date:dates.includes(today())?today():dates[0],scale:base.scale}:base}
 function sliderToScale(value){return MIN_SCALE*(MAX_SCALE/MIN_SCALE)**(Number(value)/100)}
 function scaleToSlider(value){return Math.round(100*Math.log(value/MIN_SCALE)/Math.log(MAX_SCALE/MIN_SCALE))}
 function zoomTo(newScale,clientX){
@@ -175,6 +234,7 @@ function zoomTo(newScale,clientX){
  const anchorX=clientX===undefined?(visible?selectedX:corner+(sc.clientWidth-corner)/2):Math.max(corner,Math.min(sc.clientWidth,clientX-rect.left));
  const anchorDay=(sc.scrollLeft+anchorX-corner)/scale;
  scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,newScale));
+ syncView();
  renderTimeline();sc.scrollLeft=corner+anchorDay*scale-anchorX;
  $('zoom-slider').value=scaleToSlider(scale);
  $('zoom-slider').title=tr(`时间轴缩放 ${Math.round(scale)} 像素/天`,`Timeline zoom: ${Math.round(scale)} px/day`);
@@ -183,7 +243,7 @@ function stepZoom(direction){zoomTo(sliderToScale(Math.max(0,Math.min(100,Number
 function setViewRange(){
  const start=$('view-start').value,end=$('view-end').value;
  if(!validDate(start)||!validDate(end)||start>end){notify(tr('显示范围的结束日期不能早于开始日期','The display end date cannot be earlier than the start date'));$('view-start').value=viewStart;$('view-end').value=viewEnd;return}
- viewStart=start;viewEnd=end;renderTimeline();$('timeline-scroll').scrollLeft=0;
+ viewStart=start;viewEnd=end;syncView();renderTimeline();$('timeline-scroll').scrollLeft=0;
 }
 let suppressTaskClick=false;
 function autoScrollWhileDragging(e){
@@ -199,9 +259,9 @@ function taskDropTarget(e,task,source,start,end,vertical,startY){
   const newLane=!canShareLane(phase,phase.lanes[index],task,start,end);
   return {phase,row:row||[...$('tracks').children].find(el=>String(el.dataset.phaseId)===String(phase.id)),index:index+(newLane?1:0),newLane};
  }
- const local=e.clientY-row.getBoundingClientRect().top-12;
- const boundary=Math.round(local/35),inGap=Math.abs(local-boundary*35)<=7;
- let index=Math.max(0,Math.min(phase.lanes.length,Math.floor(local/35)));
+ const local=e.clientY-row.getBoundingClientRect().top-12,pitch=lanePitch();
+ const boundary=Math.round(local/pitch),inGap=Math.abs(local-boundary*pitch)<=7;
+ let index=Math.max(0,Math.min(phase.lanes.length,Math.floor(local/pitch)));
  let newLane=!phase.lanes.length||inGap||index===phase.lanes.length;
  if(newLane)index=Math.max(0,Math.min(phase.lanes.length,boundary));
  else if(!canShareLane(phase,phase.lanes[index],task,start,end)){index++;newLane=true}
@@ -211,7 +271,7 @@ function showLaneDrop(target){
  document.querySelectorAll('.lane-drop').forEach(el=>el.remove());
  const body=target.row?.querySelector('.track-body');if(!body)return;
  const indicator=document.createElement('div');indicator.className='lane-drop'+(target.newLane?' new':'');
- indicator.style.top=(target.newLane?7+target.index*35:12+target.index*35)+'px';body.append(indicator);
+ indicator.style.top=(target.newLane?7+target.index*lanePitch():12+target.index*lanePitch())+'px';body.append(indicator);
 }
 function bindTaskDrag(bar,task,source){
  let drag=null;
@@ -255,7 +315,7 @@ function bindTaskDrag(bar,task,source){
    else if(state.edge==='move')task.laneId=target.phase.lanes[target.index];
    task.startTime=start;task.endTime=end;task.updatedAt=stamp();selection=task.id;
   });
-  if(start<viewStart)viewStart=start;if(end>viewEnd)viewEnd=end;
+  if(start<viewStart)viewStart=start;if(end>viewEnd)viewEnd=end;syncView();
   renderTimeline();
  }
  bar.onpointerup=e=>finish(e,false);bar.onpointercancel=e=>finish(e,true);
@@ -321,7 +381,7 @@ function renderTimeline(){
    const rowIndex=p.lanes.indexOf(t.laneId);if(rowIndex<0)continue;
    const bar=document.createElement('div');bar.className='task-bar'+(String(selection)===String(t.id)?' selected':'');
    bar.dataset.status=statuses[t.status]?t.status:'ongoing';bar.dataset.id=String(t.id);
-   bar.style.left=dayDiff(viewStart,t.startTime)*scale+'px';bar.style.top=(12+rowIndex*35)+'px';
+   bar.style.left=dayDiff(viewStart,t.startTime)*scale+'px';bar.style.top=(12+rowIndex*lanePitch())+'px';
    bar.style.width=Math.max(scale,(dayDiff(t.startTime,t.endTime)+1)*scale-4)+'px';
    bar.textContent=t.name;bar.title=tr(`${t.name}｜${t.startTime} 至 ${t.endTime}；中间拖动日期和轨道，边缘调整日期`,`${t.name} | ${t.startTime} to ${t.endTime}; drag the center to move, edges to resize`);
    if((dayDiff(t.startTime,t.endTime)+1)*scale>=28)for(const edge of ['start','end']){const grip=document.createElement('span');grip.className='task-resize-handle '+edge;grip.dataset.edge=edge;grip.title=edge==='start'?tr('拖动开始日期','Drag start date'):tr('拖动结束日期','Drag end date');bar.append(grip)}
@@ -329,7 +389,7 @@ function renderTimeline(){
    bar.onclick=e=>{e.stopPropagation();if(suppressTaskClick){suppressTaskClick=false;return}selection=t.id;prefs.detailsCollapsed=false;persistPrefs();renderTimeline();renderDetails();[...document.querySelectorAll('.task-bar')].find(x=>x.dataset.id===String(t.id))?.scrollIntoView({block:'nearest',inline:'nearest'})};
    body.append(bar);
   }
-  const height=Math.max(56,p.lanes.length*35+20);body.style.height=height+'px';row.style.height=height+'px';
+  const height=Math.max(56,p.lanes.length*lanePitch()+20);body.style.height=height+'px';row.style.height=height+'px';
   if(scale>=10)for(const i of mondayIndexes){const line=document.createElement('div');line.className='week-divider';line.style.left=i*scale+'px';body.append(line)}
   if(todayIndex>=0){const line=document.createElement('div');line.className='today-track-line';line.style.left=todayIndex*scale+'px';body.append(line)}
   if(selectedIndex>=0){const line=document.createElement('div');line.className='cursor-track-line';line.style.left=selectedIndex*scale+'px';body.append(line)}
@@ -354,8 +414,6 @@ function renderDetails(){
  field(fields,tr('结束日期','End date'),t.endTime,'date',v=>{if(validDate(v)&&v>=t.startTime){t.endTime=v;t.updatedAt=stamp()}});
  field(fields,tr('状态','Status'),t.status,'select',{options:Object.fromEntries(Object.keys(statuses).map(key=>[key,statusLabel(key)])),set:set('status')});
  field(fields,tr('所属阶段','Phase'),p.id,'select',{options:Object.fromEntries(data.timelineData.map(x=>[x.id,x.phaseName])),set:v=>{const target=data.timelineData.find(x=>String(x.id)===v);if(target&&target!==p){p.tasks=p.tasks.filter(x=>x!==t);target.tasks.push(t);t.updatedAt=stamp()}}});
- field(fields,tr('负责人（可选）','Assignee (optional)'),t.assignee||'','text',set('assignee'),true);
- field(fields,tr('链接（可选）','Link (optional)'),t.link||'','url',set('link'),true);
  field(fields,tr('任务描述','Description'),t.description||'','textarea',set('description'),true);left.append(fields);
  const title=document.createElement('h3');title.textContent=tr('子任务 ','Subtasks ')+`${t.subTasks.filter(sub=>sub.status==='completed').length}/${t.subTasks.length}`;right.append(title);
  for(const sub of t.subTasks){
@@ -367,7 +425,7 @@ function renderDetails(){
  }
  const add=document.createElement('button');add.textContent=tr('＋ 添加子任务','＋ Add subtask');add.onclick=()=>showSubModal(t,null);right.append(add);grid.append(left,right);host.append(grid);
  const foot=document.createElement('div');foot.className='details-footer';
- const remove=document.createElement('button');remove.className='danger';remove.textContent=tr('删除任务','Delete task');remove.onclick=()=>confirmAction(tr('删除任务','Delete task'),tr(`确定删除「${t.name}」？`,`Delete “${t.name}”?`),()=>mutate(()=>{p.tasks=p.tasks.filter(x=>x!==t);selection=null}));
+ const remove=document.createElement('button');remove.className='danger';remove.textContent=tr('删除任务','Delete task');remove.onclick=()=>confirmDeleteTask(t.id);
  const done=document.createElement('button');done.className='primary';done.textContent=tr('保存修改','Apply changes');done.title=tr('应用当前输入；Ctrl+S 导出整个 JSON','Apply edits in this page; Ctrl+S downloads the complete JSON');done.onclick=()=>{flushEdit();notify(tr('修改已应用；请按 Ctrl+S 保存 JSON','Changes applied; press Ctrl+S to save the JSON'))};
  foot.append(remove,done);host.append(foot)
 }
@@ -400,6 +458,7 @@ function renderJournal(){
 function focusEntry(key,index){const block=[...document.querySelectorAll('.log-block')].find(x=>x.querySelector('h3')?.textContent===logLabel(key));block?.querySelectorAll('.entry textarea')[index]?.focus()}
 function modal(html){$('modal').innerHTML=html;$('modal-cover').classList.remove('hidden');$('modal').querySelectorAll('[data-close]').forEach(x=>x.onclick=closeModal)}function closeModal(){$('modal-cover').classList.add('hidden');$('modal').replaceChildren()}
 function confirmAction(title,message,action){modal(`<h2>${safe(title)}</h2><p>${safe(message)}</p><div class="modal-actions"><button data-close>${tr('取消','Cancel')}</button><button id="confirm" class="danger">${tr('确定','Confirm')}</button></div>`);$('confirm').onclick=()=>{closeModal();action()}}
+function confirmDeleteTask(id){const found=taskById(id);if(!found)return false;const {p,t}=found;confirmAction(tr('删除任务','Delete task'),tr(`确定删除「${t.name}」？`,`Delete “${t.name}”?`),()=>mutate(()=>{p.tasks=p.tasks.filter(x=>x!==t);selection=null}));return true}
 function showPhaseModal(p){
  modal(`<h2>${p?tr('编辑阶段','Edit phase'):tr('新增阶段','Add phase')}</h2><form id="phase-form" class="field"><label>${tr('阶段名称','Phase name')}<input id="phase-name" required maxlength="100" value="${safe(p?.phaseName||'')}"></label><label class="phase-color-field">${tr('阶段颜色','Phase color')}<input id="phase-color" type="color" value="${/^#[0-9a-f]{6}$/i.test(p?.color)?p.color:'#879cad'}"></label><div class="modal-actions">${p?`<button type="button" id="delete-phase" class="danger">${tr('删除阶段','Delete phase')}</button>`:''}<button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('保存','Save')}</button></div></form>`);
  $('phase-form').onsubmit=e=>{e.preventDefault();const name=$('phase-name').value.trim();if(!name)return;mutate(()=>{if(p){p.phaseName=name;p.color=$('phase-color').value;p.updatedAt=stamp()}else data.timelineData.push({id:uid(),phaseName:name,color:$('phase-color').value,lanes:[],tasks:[],updatedAt:stamp()})});closeModal()};
@@ -408,11 +467,37 @@ function showPhaseModal(p){
 function showTaskModal(){
  if(!data.timelineData.length){notify(tr('请先添加阶段','Add a phase first'));return}
  modal(`<h2>${tr('新增任务','Add task')}</h2><form id="task-form" class="field"><label>${tr('所属阶段','Phase')}<select id="task-phase">${data.timelineData.map(p=>`<option value="${safe(p.id)}">${safe(p.phaseName)}</option>`).join('')}</select></label><label>${tr('任务名称','Task name')}<input id="task-name" required maxlength="200"></label><label>${tr('开始日期','Start date')}<input id="task-start" type="date" value="${viewDate}" required></label><label>${tr('结束日期','End date')}<input id="task-end" type="date" value="${viewDate}" required></label><label>${tr('描述','Description')}<textarea id="task-description"></textarea></label><div class="modal-actions"><button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('创建','Create')}</button></div></form>`);
- $('task-form').onsubmit=e=>{e.preventDefault();const start=$('task-start').value,end=$('task-end').value;if(!validDate(start)||!validDate(end)||start>end){notify(tr('结束日期不能早于开始日期','End date cannot be earlier than start date'));return}const p=data.timelineData.find(p=>String(p.id)===$('task-phase').value);let id=uid();mutate(()=>p.tasks.push({id,name:$('task-name').value.trim(),description:$('task-description').value,status:'ongoing',assignee:'',link:'',startTime:start,endTime:end,subTasks:[],updatedAt:stamp()}));ensureRange(start);ensureRange(end);closeModal();selectTask(id)}
+ const remembered=data.timelineData.find(p=>String(p.id)===String(prefs.lastTaskPhaseId)),selected=taskById(selection)?.p;
+ $('task-phase').value=String((remembered||selected||data.timelineData[0]).id);
+ $('task-form').onsubmit=e=>{e.preventDefault();const start=$('task-start').value,end=$('task-end').value;if(!validDate(start)||!validDate(end)||start>end){notify(tr('结束日期不能早于开始日期','End date cannot be earlier than start date'));return}const p=data.timelineData.find(p=>String(p.id)===$('task-phase').value);if(!p)return;let id=uid();mutate(()=>p.tasks.push({id,name:$('task-name').value.trim(),description:$('task-description').value,status:'ongoing',startTime:start,endTime:end,subTasks:[],updatedAt:stamp()}));prefs.lastTaskPhaseId=p.id;persistPrefs();ensureRange(start);ensureRange(end);closeModal();selectTask(id)}
 }
 function showSubModal(task,sub){
  modal(`<h2>${sub?tr('编辑','Edit'):tr('新增','Add')}${tr('子任务',' subtask')}</h2><form id="sub-form" class="field"><label>${tr('内容','Text')}<input id="sub-name" required value="${safe(sub?.text||'')}"></label><label>${tr('描述','Description')}<textarea id="sub-desc">${safe(sub?.description||'')}</textarea></label><label>${tr('状态','Status')}<select id="sub-status">${Object.keys(statuses).map(v=>`<option value="${v}">${statusLabel(v)}</option>`).join('')}</select></label><div class="modal-actions"><button type="button" data-close>${tr('取消','Cancel')}</button><button class="primary">${tr('保存','Save')}</button></div></form>`);
  $('sub-status').value=sub?.status||'ongoing';$('sub-form').onsubmit=e=>{e.preventDefault();const name=$('sub-name').value.trim();if(!name)return;mutate(()=>{if(sub){sub.text=name;sub.description=$('sub-desc').value;sub.status=$('sub-status').value;sub.updatedAt=stamp()}else task.subTasks.push({id:uid(),text:name,description:$('sub-desc').value,status:$('sub-status').value,updatedAt:stamp()});task.updatedAt=stamp()});closeModal()}
+}
+function editingText(target){return !!target?.closest?.('input,textarea,select,[contenteditable]')}
+function copySelectedTask(){
+ const found=taskById(selection);if(!found)return false;
+ copiedTask={phaseId:found.p.id,task:clone(found.t)};
+ notify(tr('已复制任务；按 Ctrl+V 粘贴','Task copied; press Ctrl+V to paste'));return true
+}
+function pasteCopiedTask(){
+ if(!copiedTask)return false;
+ const phase=data.timelineData.find(p=>String(p.id)===String(copiedTask.phaseId));
+ if(!phase){notify(tr('原阶段已删除，无法粘贴任务','The original phase was deleted; cannot paste the task'));return true}
+ const task=clone(copiedTask.task),id=uid();
+ task.id=id;task.startTime=viewDate;task.endTime=addDays(viewDate,dayDiff(copiedTask.task.startTime,copiedTask.task.endTime));task.updatedAt=stamp();
+ task.subTasks=(task.subTasks||[]).map(sub=>({...sub,id:uid(),updatedAt:stamp()}));
+ mutate(()=>{
+  const originalLane=copiedTask.task.laneId;
+  if(phase.lanes.includes(originalLane)&&canShareLane(phase,originalLane,null,task.startTime,task.endTime))task.laneId=originalLane;
+  else{task.laneId=uid();const originalIndex=phase.lanes.indexOf(originalLane);phase.lanes.splice(originalIndex<0?phase.lanes.length:originalIndex+1,0,task.laneId)}
+  phase.tasks.push(task);
+ });
+ if(task.startTime<viewStart)viewStart=task.startTime;
+ if(task.endTime>viewEnd)viewEnd=task.endTime;
+ syncView();selectTask(id);
+ notify(tr('已粘贴任务','Task pasted'));return true
 }
 function safeName(s){return (s||tr('工作记录','Work Record')).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').trim().slice(0,80)||tr('工作记录','Work Record')}
 function exportData(){flushEdit();const dates=allDates(),start=dates[0]||viewDate,end=dates.at(-1)||viewDate;return {filename:`${start.replaceAll('-','').slice(2)}_${end.replaceAll('-','').slice(2)}_${safeName(data.projectName)}.json`,content:JSON.stringify(data,null,2)}}
@@ -438,13 +523,16 @@ function exportMarkdown(){
 }
 function normalize(obj){
  if(!obj||!Array.isArray(obj.timelineData))throw Error(tr('缺少阶段和任务数据','Missing phase and task data'));
- const out={version:3,projectName:String(obj.projectName||tr('工作记录','Work record')),phaseOrderUpdatedAt:String(obj.phaseOrderUpdatedAt||''),timelineData:[],dailyLogs:{}};
+ const out={version:5,projectName:String(obj.projectName||tr('工作记录','Work record')),phaseOrderUpdatedAt:String(obj.phaseOrderUpdatedAt||''),timelineData:[],dailyLogs:{}};
  for(const p of obj.timelineData){
   if(!p||!Array.isArray(p.tasks))throw Error(tr('阶段数据不完整','Incomplete phase data'));
   const phase={...p,id:p.id??uid(),phaseName:String(p.phaseName||tr('未命名阶段','Unnamed phase')),color:/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#879cad',lanes:Array.isArray(p.lanes)?p.lanes.filter(id=>typeof id==='string'):[],updatedAt:p.updatedAt||'',tasks:[]};
   for(const t of p.tasks){
    if(!validDate(t.startTime)||!validDate(t.endTime)||t.startTime>t.endTime)throw Error(tr('任务日期无效','Invalid task dates'));
-   phase.tasks.push({...t,id:t.id??uid(),name:String(t.name||tr('未命名任务','Unnamed task')),description:String(t.description||''),status:statuses[t.status]?t.status:'ongoing',startTime:t.startTime,endTime:t.endTime,laneId:typeof t.laneId==='string'?t.laneId:'',subTasks:Array.isArray(t.subTasks)?t.subTasks.map(sub=>({...sub,id:sub.id??uid(),text:String(sub.text||''),status:statuses[sub.status]?sub.status:'ongoing'})):[],updatedAt:t.updatedAt||''});
+   const {assignee,link,...taskFields}=t;
+   const legacy=[assignee!=null&&String(assignee).trim()?`负责人：${assignee}`:'',link!=null&&String(link).trim()?`链接：${link}`:''].filter(Boolean);
+   const description=[String(t.description||''),...legacy].filter(Boolean).join('\n\n');
+   phase.tasks.push({...taskFields,id:t.id??uid(),name:String(t.name||tr('未命名任务','Unnamed task')),description,status:statuses[t.status]?t.status:'ongoing',startTime:t.startTime,endTime:t.endTime,laneId:typeof t.laneId==='string'?t.laneId:'',subTasks:Array.isArray(t.subTasks)?t.subTasks.map(sub=>({...sub,id:sub.id??uid(),text:String(sub.text||''),status:statuses[sub.status]?sub.status:'ongoing'})):[],updatedAt:t.updatedAt||''});
   }
   if(!Array.isArray(p.lanes)){
    const ends=[];
@@ -460,6 +548,7 @@ function normalize(obj){
   out.dailyLogs[date]={updatedAt:log.updatedAt||'',notes:String(log.notes||'')};
   for(const key of ['completed','issues','plans'])out.dailyLogs[date][key]=Array.isArray(log[key])?log[key].map(e=>typeof e==='string'?{id:uid(),text:e,updatedAt:''}:{id:e.id??uid(),text:String(e.text||''),updatedAt:e.updatedAt||''}):[];
  }
+ out.viewState=validView(obj.viewState)?{start:obj.viewState.start,end:obj.viewState.end,date:obj.viewState.date,scale:obj.viewState.scale}:inferredView(out);
  return out;
 }
 function newer(a,b){return String(b.updatedAt||'')>String(a.updatedAt||'')?b:a}
@@ -513,10 +602,19 @@ async function importFiles(files,merge){
  try{
   const incoming=[];
   for(const file of files)incoming.push(normalize(JSON.parse(await file.text())));
+  const dates=merge?[viewStart,viewEnd,...datesIn(data)]:[];
+  for(const item of incoming)dates.push(item.viewState.start,item.viewState.end,...datesIn(item));
+  dates.sort();
+  const chosenView=merge?{start:dates[0],end:dates.at(-1),date:viewDate,scale}:incoming.length===1?{...incoming[0].viewState}:{
+   ...incoming[0].viewState,start:dates[0],end:dates.at(-1)
+  };
   mutate(()=>{
    if(!merge){data=incoming.shift();selection=null}
    for(const item of incoming)mergeData(item);
+   viewStart=chosenView.start;viewEnd=chosenView.end;viewDate=chosenView.date;scale=chosenView.scale;
+   data.version=5;data.viewState={...chosenView};$('zoom-slider').value=scaleToSlider(scale);
   });
+  copiedTask=null;
   notify(tr(`已${merge?'合并':'导入'} ${files.length} 个 JSON 文件；请保存新的完整 JSON`,`${merge?'Merged':'Imported'} ${files.length} JSON file(s); save a new complete JSON backup`));
  }catch(error){notify(tr('导入失败：','Import failed: ')+(error?.message||tr('文件无效','Invalid file')))}
 }
@@ -558,9 +656,11 @@ function renderSearch(){
  if(results.length>100&&filter==='全部'){const note=document.createElement('p');note.className='muted';note.textContent=tr('仅显示前 100 条，请输入更多关键词','Showing the first 100 results; enter more keywords to narrow the search');panel.append(note)}
 }
 function showSettings(){
- modal(`<h2>${tr('外观设置','Appearance settings')}</h2><label>${tr('界面语言','Interface language')} <select id="language"><option value="zh">简体中文</option><option value="en">English</option></select></label><p class="small muted">${tr('切换语言不会翻译已输入的任务名称或记录内容。','Switching languages does not translate your task names or journal entries.')}</p><label>${tr('主题预设','Theme preset')} <select id="theme"><option value="暗色">${tr('暗色','Dark')}</option><option value="浅色">${tr('浅色','Light')}</option><option value="柔和">${tr('柔和','Soft')}</option><option value="自定义">${tr('自定义','Custom')}</option></select></label><p class="small muted">${tr('阶段颜色可直接点击时间轴左侧的小方块修改。','Click a square beside a phase to change its color.')}</p><h3>${tr('界面颜色','Interface colors')}</h3><div class="settings-grid" id="settings-grid"></div><h3>${tr('常用按钮','Main buttons')}</h3><div class="settings-grid" id="button-colors"></div><div class="modal-actions"><button data-close>${tr('完成','Done')}</button></div>`);
+ modal(`<h2>${tr('外观设置','Appearance settings')}</h2><label>${tr('界面语言','Interface language')} <select id="language"><option value="zh">简体中文</option><option value="en">English</option></select></label><p class="small muted">${tr('切换语言不会翻译已输入的任务名称或记录内容。','Switching languages does not translate your task names or journal entries.')}</p><label>${tr('主题预设','Theme preset')} <select id="theme"><option value="暗色">${tr('暗色','Dark')}</option><option value="浅色">${tr('浅色','Light')}</option><option value="柔和">${tr('柔和','Soft')}</option><option value="自定义">${tr('自定义','Custom')}</option></select></label><p class="small muted">${tr('阶段颜色可直接点击时间轴左侧的小方块修改。','Click a square beside a phase to change its color.')}</p><h3>${tr('显示大小','Display size')}</h3><div class="display-scale"><label for="ui-scale">${tr('界面缩放','UI scale')}</label><input id="ui-scale" type="range" min="75" max="125" step="5"><output id="ui-scale-value" for="ui-scale"></output></div><div class="display-scale"><label for="font-scale">${tr('字体大小','Font size')}</label><input id="font-scale" type="range" min="80" max="140" step="5"><output id="font-scale-value" for="font-scale"></output></div><button id="reset-display" type="button" class="quiet">${tr('恢复显示默认值','Reset display size')}</button><p class="small muted">${tr('界面、字体和时间轴缩放分别设置。','UI, font, and timeline zoom are independent.')}</p><h3>${tr('界面颜色','Interface colors')}</h3><div class="settings-grid" id="settings-grid"></div><h3>${tr('常用按钮','Main buttons')}</h3><div class="settings-grid" id="button-colors"></div><div class="modal-actions"><button data-close>${tr('完成','Done')}</button></div>`);
  $('language').value=prefs.language;$('theme').value=prefs.theme;
  $('language').onchange=()=>{const value=$('language').value;if(!['zh','en'].includes(value))return;prefs.language=value;persistPrefs();localizeStatic();render();showSettings()};
+ for(const [id,key] of [['ui-scale','uiScale'],['font-scale','fontScale']]){const slider=$(id),output=$(id+'-value');slider.value=prefs[key];output.value=prefs[key]+'%';slider.oninput=()=>{prefs[key]=Number(slider.value);output.value=prefs[key]+'%';persistPrefs();if(key==='fontScale')renderTimeline()}}
+ $('reset-display').onclick=()=>{prefs.uiScale=100;prefs.fontScale=100;persistPrefs();renderTimeline();for(const [id,key] of [['ui-scale','uiScale'],['font-scale','fontScale']]){$(id).value=prefs[key];$(id+'-value').value=prefs[key]+'%'}};
  const colors=$('settings-grid'),buttons=$('button-colors');
  function draw(){
   colors.replaceChildren();
@@ -573,12 +673,12 @@ function showSettings(){
  $('theme').onchange=()=>{const name=$('theme').value;if(themes[name]){prefs.theme=name;prefs.colors=themes[name].slice();prefs.saveColor=buttonThemes[name].save;prefs.taskColor=buttonThemes[name].task;persistPrefs();draw()}}
 }
 function splitter(el,axis){let initial=null;el.addEventListener('pointerdown',e=>{initial={x:e.clientX,y:e.clientY,width:$('journal').getBoundingClientRect().width,height:$('details').getBoundingClientRect().height};el.setPointerCapture(e.pointerId);e.preventDefault()});el.addEventListener('pointermove',e=>{if(!initial)return;if(axis==='x'){prefs.journalCollapsed=false;const width=Math.max(280,Math.min(window.innerWidth*.55,initial.width+initial.x-e.clientX));prefs.journalWidth=width/$('workspace').clientWidth*100}else{prefs.detailsCollapsed=false;const height=Math.max(52,Math.min($('left').clientHeight-120,initial.height+initial.y-e.clientY));prefs.detailsHeight=height/$('left').clientHeight*100}applyPrefs()});el.addEventListener('pointerup',()=>{if(initial){initial=null;persistPrefs();renderTimeline()}});el.addEventListener('dblclick',()=>{if(axis==='x')prefs.journalWidth=30;else prefs.detailsHeight=35;persistPrefs();renderTimeline()})}
-function setupPan(){let state=null;const sc=$('timeline-scroll');sc.addEventListener('wheel',e=>{if(!e.altKey)return;e.preventDefault();const dy=Math.max(-240,Math.min(240,e.deltaY*(e.deltaMode===1?16:1)));zoomTo(scale*Math.exp(-dy*.0015),e.clientX)},{passive:false});sc.addEventListener('pointerdown',e=>{if(e.target.closest('.task-bar,.track-name,.ruler'))return;state={x:e.clientX,left:sc.scrollLeft,moved:false};sc.setPointerCapture(e.pointerId)});sc.addEventListener('pointermove',e=>{if(!state)return;if(Math.abs(e.clientX-state.x)>3)state.moved=true;if(state.moved)sc.scrollLeft=state.left+state.x-e.clientX});sc.addEventListener('pointerup',()=>state=null);let drag=false;$('ruler').addEventListener('pointerdown',e=>{drag=true;$('ruler').setPointerCapture(e.pointerId);rulerAt(e)});$('ruler').addEventListener('pointermove',e=>{if(drag)rulerAt(e)});$('ruler').addEventListener('pointerup',()=>drag=false);function rulerAt(e){const rect=$('ruler').getBoundingClientRect(),index=Math.max(0,Math.min(dayDiff(viewStart,viewEnd),Math.floor((e.clientX-rect.left)/scale)));selectDate(addDays(viewStart,index),false)}}
+function setupPan(){let state=null;const sc=$('timeline-scroll');sc.addEventListener('wheel',e=>{if(!e.altKey)return;e.preventDefault();const dy=Math.max(-240,Math.min(240,e.deltaY*(e.deltaMode===1?16:1)));zoomTo(scale*Math.exp(-dy*.0015),e.clientX)},{passive:false});sc.addEventListener('pointerdown',e=>{if(e.target.closest('.task-bar,.track-name,.ruler'))return;state={x:e.clientX,left:sc.scrollLeft,moved:false};sc.setPointerCapture(e.pointerId)});sc.addEventListener('pointermove',e=>{if(!state)return;if(Math.abs(e.clientX-state.x)>3)state.moved=true;if(state.moved)sc.scrollLeft=state.left+state.x-e.clientX});sc.addEventListener('pointerup',()=>state=null);let drag=false;$('ruler').addEventListener('pointerdown',e=>{e.preventDefault();drag=true;$('ruler').setPointerCapture(e.pointerId);rulerAt(e)});$('ruler').addEventListener('pointermove',e=>{if(drag)rulerAt(e)});$('ruler').addEventListener('pointerup',()=>drag=false);$('ruler').addEventListener('pointercancel',()=>drag=false);function rulerAt(e){const rect=$('ruler').getBoundingClientRect(),index=Math.max(0,Math.min(dayDiff(viewStart,viewEnd),Math.floor((e.clientX-rect.left)/scale)));selectDate(addDays(viewStart,index),false)}}
 function init(){
  applyPrefs();localizeStatic();$('zoom-slider').value=scaleToSlider(scale);
  $('save').onclick=save;$('export-md').onclick=exportMarkdown;$('import').onclick=()=>$('file-input').click();
  $('file-input').onchange=e=>{askImport([...e.target.files]);e.target.value=''};
- $('new-project').onclick=()=>confirmAction(tr('新建工作区','New workspace'),tr('当前工作区会从页面中清空。若有未保存修改，请先导出 JSON。','The current workspace will be cleared from this page. Save a JSON backup first if you have unsaved changes.'),()=>mutate(()=>{data=fresh(prefs.language);selection=null;viewDate=today();viewStart=addDays(viewDate,-7);viewEnd=addDays(viewDate,30);scale=52;$('zoom-slider').value=scaleToSlider(scale)}));
+ $('new-project').onclick=()=>confirmAction(tr('新建工作区','New workspace'),tr('当前工作区会从页面中清空。若有未保存修改，请先导出 JSON。','The current workspace will be cleared from this page. Save a JSON backup first if you have unsaved changes.'),()=>{mutate(()=>{data=fresh(prefs.language);selection=null;viewDate=today();viewStart=addDays(viewDate,-7);viewEnd=addDays(viewDate,30);scale=52;$('zoom-slider').value=scaleToSlider(scale)});copiedTask=null});
  $('workspace-name').onfocus=()=>editingSnapshot=snapshot();
  $('workspace-name').oninput=e=>{data.projectName=e.target.value;setDirty();document.title=data.projectName+tr(' · 工作时间轴',' · Work Timeline')};
  $('workspace-name').onblur=()=>{if(!data.projectName.trim())data.projectName=tr('工作记录','Work Record');flushEdit()};
@@ -593,10 +693,11 @@ function init(){
   mutate(()=>{const current=ensureLog(viewDate),known=new Set(current.completed.map(x=>x.text));for(const plan of previous)if(!known.has(plan.text)){current.completed.push({id:uid(),text:plan.text,updatedAt:stamp()});known.add(plan.text)}current.updatedAt=stamp()});notify(tr('已载入昨日计划','Copied yesterday’s plan'))
  };
  $('journal-toggle').onclick=()=>{prefs.journalCollapsed=!prefs.journalCollapsed;persistPrefs();renderTimeline()};
+ $('related-toggle').onclick=()=>{prefs.relatedCollapsed=!prefs.relatedCollapsed;persistPrefs()};
  $('detail-toggle').onclick=()=>{prefs.detailsCollapsed=!prefs.detailsCollapsed;persistPrefs();renderTimeline()};
  $('modal-cover').onclick=e=>{if(e.target===$('modal-cover'))closeModal()};
  splitter($('split-h'),'x');splitter($('split-v'),'y');setupPan();
- document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();$('search-results').classList.add('hidden')}if((e.ctrlKey||e.metaKey)&&!e.altKey){const key=e.key.toLowerCase();if(key==='s'){e.preventDefault();save()}else if(key==='f'){e.preventDefault();$('search').focus();$('search').select()}else if(key==='z'){e.preventDefault();e.shiftKey?redo():undo()}else if(key==='y'){e.preventDefault();redo()}}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();$('search-results').classList.add('hidden')}const taskShortcutReady=!editingText(e.target)&&$('modal-cover').classList.contains('hidden');if(e.key==='Delete'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&taskShortcutReady&&confirmDeleteTask(selection)){e.preventDefault();return}if((e.ctrlKey||e.metaKey)&&!e.altKey){const key=e.key.toLowerCase();if((key==='c'||key==='v')&&!e.shiftKey&&taskShortcutReady){if((key==='c'?copySelectedTask():pasteCopiedTask())){e.preventDefault();return}}if(key==='s'){e.preventDefault();save()}else if(key==='f'){e.preventDefault();$('search').focus();$('search').select()}else if(key==='z'){e.preventDefault();e.shiftKey?redo():undo()}else if(key==='y'){e.preventDefault();redo()}}});
  window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
  window.addEventListener('resize',()=>renderTimeline());render();requestAnimationFrame(()=>centerDate(viewDate))
 }
